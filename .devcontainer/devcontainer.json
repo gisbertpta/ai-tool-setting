@@ -1,0 +1,16 @@
+{
+  "name": "Claude Code Sandbox",
+  // Build, mounts, capabilities and network isolation live in docker-compose.yml
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  "postStartCommand": "check-exclusions",
+  "remoteUser": "claude",
+  "customizations": {
+    "vscode": {
+      "extensions": ["eamodio.gitlens"],
+      "settings": { "terminal.integrated.defaultProfile.linux": "zsh" }
+    }
+  }
+}

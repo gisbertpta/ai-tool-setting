@@ -1,0 +1,20 @@
+# Domains the sandbox may reach (squid dstdomain syntax: leading dot = incl. subdomains).
+# Keep this short. Rebuild the proxy after changes (or restart the compose project).
+
+# Claude Code: API, login/token refresh
+.anthropic.com
+.claude.ai
+.claude.com
+
+# Stop-hook notifications (.claude/scripts/notify-ntfy.sh) — remove if the hook goes
+ntfy.sh
+
+# VS Code server + extensions (gitlens) installed inside the container
+update.code.visualstudio.com
+.vscode-cdn.net
+marketplace.visualstudio.com
+.gallerycdn.vsassets.io
+
+# Optional — uncomment only if needed from inside the container:
+# git.bitmarck.de                 # git fetch/push (container has no git credentials today)
+# artifactory.dakentw007200.de    # `uv add` / `uv sync` at runtime (build-time install is unaffected)

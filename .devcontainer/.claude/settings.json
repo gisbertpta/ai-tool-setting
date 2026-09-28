@@ -1,0 +1,23 @@
+{
+  "dangerouslySkipPermissions": true,
+  "autoUpdaterStatus": "disabled",
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $CLAUDE_PROJECT_DIR/.claude/scripts/notify-ntfy.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+ }
+}

@@ -1,0 +1,35 @@
+DIR_STATIC: "backend/src"
+
+model:
+  extraction: gptoss # gptoss # gpt5 # gpt4o
+  embedding: ada3
+
+contact:
+  name: "Stefan Coors"
+  email: "stefan.coors@bain.com"
+
+context_window_max_tokens: 128_000
+
+# DWH
+id_column: "FALLAKTE_OID"
+uuid_column: "DOK_ID"
+sql_filters: "EINGANG_WS_AM > CURRENT_DATE - INTERVAL '60 days' AND STATUS_TEXT = 'Abgeschlossen'"
+status_table: SDB_KI_WIDERSPRUCH_STATUS
+
+
+# OCR Settings
+ocr_input_target_layout: "1x1"
+
+# DB Postgres
+postgres_table_name: "widerspruchsmanager_status_table"
+
+# Pseudonymization
+pseudonymization:
+  async_timeout_seconds: 1800  # 30 minutes
+  async_poll_interval_seconds: 60  # 1 minute
+  http_timeout_seconds: 45  # 45 seconds
+  max_consecutive_failures: 3  # Fast break after 3 errors
+
+# Classification
+classification:
+  mode: extended # Options: 'binary' (default) or 'extended'

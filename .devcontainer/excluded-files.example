@@ -1,0 +1,20 @@
+# .devcontainer/excluded-files
+#
+# List files that should be masked inside the container (one path per line).
+# Paths are relative to the workspace root (/workspace).
+# Lines starting with # are ignored.
+#
+# For each listed file, add a corresponding mount entry in devcontainer.json:
+#
+#   /dev/null overlay (blanks the file):
+#     "source=/dev/null,target=/workspace/<path>,type=bind,readonly"
+#
+#   Dummy template (replaces with safe placeholder):
+#     "source=${localWorkspaceFolder}/.devcontainer/dummy.<basename>,target=/workspace/<path>,type=bind,readonly"
+#     → create .devcontainer/dummy.<basename> with placeholder values only
+#
+# Examples:
+# .env
+# config/secrets.yml
+# src/credentials.json
+secret.yml

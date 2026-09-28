@@ -1,0 +1,63 @@
+# Claude Code sandbox: the devcontainer has no direct internet route.
+# All egress goes through the 'proxy' service, which only allows proxy/allowlist.txt.
+# Relative paths below resolve against this file's folder (.devcontainer/).
+
+name: claude-sandbox
+
+services:
+  devcontainer:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+      secrets:
+        - git-username
+        - git-password
+    command: sleep infinity
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      HTTPS_PROXY: http://proxy:3128
+      HTTP_PROXY: http://proxy:3128
+      https_proxy: http://proxy:3128
+      http_proxy: http://proxy:3128
+      NO_PROXY: localhost,127.0.0.1
+      no_proxy: localhost,127.0.0.1
+    volumes:
+      - ..:/workspace:cached
+      # Read-only: the agent must not be able to edit its own sandbox config
+      - ./:/workspace/.devcontainer:ro
+      - ./.claude:/workspace/.claude:ro
+      # Claude home + git identity
+      - ${HOME}/.claude:/home/claude/.claude:cached
+      - ${HOME}/.claude.json:/home/claude/.claude.json:cached
+      - ${HOME}/.gitconfig:/home/claude/.gitconfig:ro
+      # Masked secrets (keep in sync with excluded-files)
+      - ./dummy-ki-zfw-wm-code/dummy.configs:/workspace/ki-zfw-wm-code/configs:ro
+      - ./dummy.build-secret:/workspace/ki-zfw-wm-code/build-secret:ro
+      - /dev/null:/workspace/ki-zfw-wm-code/backend/scripts/.env:ro
+    networks:
+      - sandbox
+    depends_on:
+      - proxy
+
+  proxy:
+    build:
+      context: ./proxy
+    networks:
+      - sandbox
+      - egress
+    restart: unless-stopped
+
+networks:
+  # internal: no gateway — containers here can only talk to each other
+  sandbox:
+    internal: true
+  egress: {}
+
+secrets:
+  git-username:
+    file: ${HOME}/.build-secrets/username
+  git-password:
+    file: ${HOME}/.build-secrets/password

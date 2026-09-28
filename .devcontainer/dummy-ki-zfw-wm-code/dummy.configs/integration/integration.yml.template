@@ -1,0 +1,593 @@
+# this file is GIT-IGNORED and not part of the code-repository
+# if the top-level keys are stages (dev/test/prod), the actual environment must
+# be given via environment variable (STAGE=dev/test/prod)
+
+
+app_stage: dev
+
+azuredi:
+  endpoint_url: https://api.uat.azure01.dakintra.de # https://api.qa.llm.azure01.dakintra.de/azure-di-layout-v4
+  s_api_key: DOCUMENTINTELLIGENCE_API_KEY
+  api_version: '2024-11-30'
+  connection_verify: true
+azure_di_max_concurrent: 1
+
+local_file_path: data/input/
+write_file_path: data/output/
+base_table: DATEN_KI..ANF_887_WUK_DOK
+doc_storage: s3 # s3 or local
+
+database:
+  netezza:
+    type: netezza
+    server: bicc1.prod01.dakintra.de
+    port: 5480
+    default_catalog:
+      read: DBE_DS
+      write: DBE_SDB_KI
+    driver_type: jdbc
+    driver_class_jdbc: org.netezza.Driver
+    driver_class_odbc: NetezzaSQL
+    driver_loc: nzjdbc3.jar
+
+# Connection config for netezza dwh connection via daktools
+db_netezza:
+  module: dakDb
+  db_type: netezza
+  server: bicc1.prod01.dakintra.de # dev netezza
+  # server: sql-clients.netezza.prod01.dakintra.de # prod netezza
+  port: 5480
+  s_user: NETEZZA_U # s_user will look for NETEZZA_U in the secrets.yml, do not put password here
+  s_password: NETEZZA_P # s_user will look for NETEZZA_P in the secrets.yml, do not put password here
+  driver_class: NetezzaSQL
+  driver_loc: drivers/nzjdbc3.jar
+  default_read_catalog: DBE_DS # for dev netezza
+  # default_read_catalog: DBP_DS # for prod netezza
+  default_write_catalog: DBE_SDB_KI
+
+# Stage dependent table name config for dwh s_access_key
+
+dwh:
+  default_environment: dbp # Netezza catalog prefix (dbe, dbt, dbp)
+  tables:
+    fa_fallakte:
+      name: FA_FALLAKTE_ist
+      subcatalog: ids_fa
+    fa_fallakte_element:
+      name: FA_FALLAKTE_ELEMENT_ist
+      subcatalog: ids_fa
+    fa_fallakte_dokument:
+      name: FA_FALLAKTE_DOKUMENT_ist
+      subcatalog: ids_fa
+
+
+
+
+s3:
+  endpoint: https://s3-hh.mauintra.de
+  bucket_name: dak-ki-zfw-wm-dev
+  # verify true resolves to the ca bundle path from AWS_CA_BUNDLE or REQUEST_CS_BUNDLE 
+  # (the deployment image sets the latter). false and explicit bundle paths pass through
+  # unchanged
+  verify: true /etc/pki/tls/certs/ca-bundle.crt
+  s_access_key: S3_ACCESS_KEY
+  s_secret_access_key: S3_SECRET_ACCESS_KEY
+
+logging:
+  version: 1
+  formatters:
+    dak:
+      format: "%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s"
+  handlers:
+    console:
+      class: logging.StreamHandler
+      formatter: dak
+    file_handler:
+      class: logging.handlers.TimedRotatingFileHandler
+      filename: logs/log.log
+      when: midnight
+      formatter: dak
+  root:
+    level: DEBUG
+    handlers: [console, file_handler]
+  disable_existing_loggers: False
+
+app_service:
+  host: 0.0.0.0
+  port: 33333
+  prometheus_metrics_port: 9100
+  service_token_valid_hours: 24
+  environment: local
+  s_secret_key_jwt: APP_SERVICE_SECRET_KEY_JWT
+  s_user_jwt: APP_SERVICE_USER_JWT
+  s_password_jwt: APP_SERVICE_PW_JWT
+  s_user_basicauth: APP_SERVICE_USER_BASICAUTH
+  s_pw_basicauth: APP_SERVICE_PW_BASICAUTH
+
+ada3:
+    azure_endpoint: https://api.dev.llm.azure01.dakintra.de
+    azure_deployment: cd-genai-ada3-mini-dev
+    dimensions: 1536
+    verify: False
+    api_version: "2023-07-31"
+
+gpt4:
+    azure_endpoint: https://api.dev.llm.azure01.dakintra.de
+    openai_api_version: 2024-02-15-preview
+    azure_deployment: cd-genai-gpt4-dev
+    temperature: 0
+    request_timeout: 360
+    max_retries: 3
+    verify: false
+
+gpt4o:
+  azure_deployment: cd-genai-gpt4o-dev
+  azure_endpoint: https://api.dev.llm.azure01.dakintra.de
+  openai_api_version: 2024-02-15-preview
+  temperature: 0
+  request_timeout: 360
+  max_retries: 3
+  verify: false
+  s_password: GPT4O_P
+
+gpt5:
+  azure_deployment: cd-genai-gpt5-dev
+  azure_endpoint: https://api.dev.llm.azure01.dakintra.de
+  openai_api_version: 2024-02-15-preview
+  temperature: 1
+  request_timeout: 360
+  max_retries: 3
+  verify: false
+  s_password: GPT5_P
+
+gptoss:
+  endpoint: https://llm-aas.apps.ham-gpu-prod01.mauintra.de/v1
+  api_version: 2023-08-01-preview
+  model: openai/gpt-oss-120b # gpt-oss-120b
+  tls_verification: true
+  temperature: 0.0
+  timeout: 360
+  max_retries: 3
+  max_connections: 10
+  s_api_key: AZURE_OPENAI_API_KEY
+
+llama31:
+    model: "Meta-Llama-3.1-70B-Instruct"
+    base_url: "https://api.dev.llm.azure01.dakintra.de/cllm/v1"
+    temperature: 0.0
+    verify: false
+
+llama33:
+    model: "Llama-3.3-70B-Instruct"
+    base_url: "https://api.dev.llm.azure01.dakintra.de/cllm/v1"
+    temperature: 0.0
+    verify: false
+
+app_logic:
+    open_ai: true
+
+postgresql:
+  connection_string: postgresql://pgadmin:{}@pseudo-wissenspool.postgres.database.azure.com:5432/postgres?sslmode=require
+  db_schema:  # optional – set to your dev username for local schema isolation (e.g. janssen); leave empty for shared public schema on OpenShift
+  s_password: postgresql
+
+auth:
+  USE_ENTRA: True
+  AUTH_CLIENT_ID: "652b767f-fe25-473b-9e76-7d99f78fa7cd"
+  AUTH_TENANT_ID: "613aadb3-4317-47f0-9d7f-beb42928fbe3"
+  AUTH_REDIRECT_URL: "http://localhost:8501"
+  role_mappings:
+    # Role mappings for auth
+    # scheme  group id (MS graph user profile group id) : role name (app) # group name DAK
+    5ce7f77c-69e5-4664-b76e-aac48dae3fc1: admin # AUG-SAPV-Vertragsassistent
+    acf25b82-db4b-4697-a9a5-6dd67d5c1efa: user  # AUG-SAPV-Vertragsassistent-Pilotnutzer
+
+dev_settings:
+  db_prefix:  # Dev override for the db prefix - leave blank if no override used
+
+oaipseudo:
+  enabled: false
+  tls_verification: false
+  url: https://api.dev.llm.azure01.dakintra.de/anonymization
+
+
+
+# Classification evaluation config
+classification_evaluation:
+  upload_input_pdfs_to_output: True  # Whether to upload input PDFs to the output directory
+  # Only PDFs matching this pattern will be uploaded (if upload_input_pdfs_to_output is true)
+  pdf_filename_filter: INTERNAKTENANSICHT
+  input_folder_prefix: Evaluation_Klassifizierung/input
+  output_folder_prefix: Evaluation_Klassifizierung/output
+  output_archive_folder_prefix: Evaluation_Klassifizierung/output_archive
+  eval_template_key: Evaluation_Klassifizierung/Dokumentklassifizierung_template.xlsx
+  markdown_prefix: Evaluation_Klassifizierung/fallakten_md_pseudo/
+  processed_prefix: Evaluation_Klassifizierung/processed
+  failed_prefix: Evaluation_Klassifizierung/failed
+  feedback_input_prefix: Evaluation_Klassifizierung/feedback
+  feedback_archive_prefix: Evaluation_Klassifizierung/feedback_archive
+  feedback_error_prefix: Evaluation_Klassifizierung/feedback_error
+  feedback_export_prefix: Evaluation_Klassifizierung/Auswertung
+  feedback_segments_table: widerspruchsmanager_classification_feedback_segments
+
+# Classifier config to overwrite the in-code-config
+# Only un-comment this if integration-based config is desired! 
+# 
+# gutachten_classifier:
+#   # Rules are evaluated in order (first match wins).
+#   # A subtype matches when ANY positive_pattern hits AND NO negative_pattern hits.
+#   # Fallback is always GutachtenType.KURZGUTACHTEN
+#   - subtype: Vollgutachten
+#     enabled: true
+#     positive_patterns:
+#       - 'Summe der Einzelpunkte:?\s+(\d+)'
+#       - 'Summe\s+der\s+gewichteten\s+Punkte'
+#     negative_patterns: []
+#   - subtype: Nebengutachten
+#     enabled: true
+#     positive_patterns:
+#       - "Pflegeaufwand der Pflegeperson"
+#       - "Angegebene Pflegestd. pro Woche"
+#       - "Rehabilitationsempfehlungen.* nach SGB XI"
+#       - "Auszug aus dem Gutachten vom"
+#     negative_patterns:
+#       - 'Summe der Einzelpunkte:?\s+(\d+)'
+#       - 'Summe\s+der\s+gewichteten\s+Punkte'
+#   - subtype: Eilgutachten
+#     enabled: true
+#     positive_patterns:
+#       - "Pflegerelevante Fremdbefunde"
+#       - 'Erledigungsart:\s+(?:Nach Aktenlage\s*-\s*)?(?:-\s*)?Überleitungsgutachten'
+#       - "Antrag.*mit verkürzter Begutachtungsfrist.*gestellt"
+#       - "Überleitungsgutachten"
+#     negative_patterns:
+#       - 'Summe der Einzelpunkte:?\s+(\d+)'
+#       - 'Summe\s+der\s+gewichteten\s+Punkte'
+#   - subtype: Kurzgutachten
+#     enabled: true
+#     positive_patterns:
+#       - "Kurzgutachten Pflege SGB XI"
+#     negative_patterns:
+#       - 'Erledigungsart:\s+(?:Nach Aktenlage\s*-\s*)?(?:-\s*)?Überleitungsgutachten'
+#       - 'Summe der Einzelpunkte:?\s+(\d+)'
+#       - 'Summe\s+der\s+gewichteten\s+Punkte'
+#       - "Rückgabegrund"
+#   - subtype: Auftragsrückgabe
+#     enabled: true
+#     positive_patterns:
+#       - "Ablehnung.*Begutachtung"
+#       - "Rückgabegrund"
+#       - "Begutachtung.*abgelehnt"
+#       - "Begutachtungsauftrag.*abgelehnt"
+#       - "keine.*Begutachtung.*möglich"
+#       - "aus Zuständigkeitsbereich verzogen"
+#     negative_patterns:
+#       - "Ergebnis Pflegegrad"
+
+# letter_dak_classifier:
+#   # A subtype matches when ANY positive_pattern hits AND NO negative_pattern hits.
+#   # Classification is based on Vorlagennummern printed on DAK letters (e.g. 955-005).
+#   # Fallback is always LetterDakType.UNSPECIFIED.
+#   - subtype: Bewilligung
+#     enabled: true
+#     positive_patterns:
+#       - "(?m)^955-(?:003|005|006|034|044|045|067|069|146|907|300|900|510)"
+#     negative_patterns: []
+#   - subtype: Ablehnung
+#     enabled: true
+#     positive_patterns:
+#       - "(?m)^955-(?:018|162)"
+#     negative_patterns: []
+#   - subtype: Vorab_Ablehnung
+#     enabled: true
+#     positive_patterns:
+#       - "(?m)^955-(?:511)"
+#     negative_patterns: []
+#   - subtype: Informationsschreiben
+#     enabled: true
+#     positive_patterns:
+#       - "(?m)^955-(?:024|084|113|000|117|182|151|184|041)|010-(?:050|011|060|016)|200-003"
+#     negative_patterns: []
+#   - subtype: Nachuntersuchung_Planung
+#     enabled: true
+#     positive_patterns:
+#       - '(?m)^955-112' 
+#     negative_patterns: []
+#   - subtype: Abhilfe
+#     enabled: true
+#     positive_patterns:
+#       - "(?m)^955-017|010-010" # 955-182 as subtype from Informationsschreiben
+#     negative_patterns: []
+#   - subtype: Widerspruch
+#     enabled: false
+#     positive_patterns:
+#       - "(?m)^955-(?:151|182)"
+#     negative_patterns: []
+#   - subtype: Antrag
+#     # Response letters to the insured person regarding an application.
+#     # Disabled for now; reserved for future routing use.
+#     enabled: false
+#     positive_patterns:
+#       - "(?m)^955-(?:031|032|116|117|145|200|510)"
+#     negative_patterns: []
+#   - subtype: Rückstufung
+#     enabled: true
+#     positive_patterns:
+#       - "(?m)^955-(?:126|180|027)"
+#     negative_patterns: []
+
+# bewilligung_subtype_classifier:
+#   - subtype: Bewilligung_Irrelevant
+#     enabled: true
+#     positive_patterns:
+#       - "(?m)^955-(?:300|900)"
+#     negative_patterns: []
+#   - subtype: Bewilligung_Vorab
+#     enabled: true
+#     positive_patterns:
+#       - "(?m)^955-(?:004|510)"
+#     negative_patterns: []
+#   - subtype: Bewilligung_Standard
+#     enabled: true
+#     positive_patterns:
+#       - "(?m)^955-(?:003|005|006|034|044|045|067|069|146|907)"
+#     negative_patterns: []
+
+# abhilfe_subtype_classifier:
+#   - subtype: Abhilfe
+#     enabled: true
+#     positive_patterns:
+#       - "(?m)^955-017"
+#     negative_patterns: []
+#   - subtype: Keine_Abhilfe
+#     enabled: true
+#     positive_patterns:
+#       - "(?m)^010-010"
+#     negative_patterns: []
+
+# rückstufung_subtype_classifier:
+#   - subtype: Volle_Rückstufung
+#     enabled: true
+#     positive_patterns:
+#       - "(?m)^955-126"
+#     negative_patterns: []
+#   - subtype: Geplante_Rückstufung
+#     enabled: true
+#     positive_patterns:
+#       - "(?m)^955-027"
+#     negative_patterns: []
+#   - subtype: Beendigung_Leistungsgewährung
+#     enabled: true
+#     positive_patterns:
+#       - "(?m)^955-180"
+#     negative_patterns: []
+#   - subtype: Ende_Der_Befristung
+#     enabled: false
+#     positive_patterns:
+#       - 
+#     negative_patterns: []
+
+# antrag_subtype_classifier:
+#   # Classifies Antrag document types based on textual patterns.
+#   # Rules are evaluated in order (first match wins).
+#   # A subtype matches when ANY positive_pattern hits AND NO negative_pattern hits.
+#   # Fallback is always AntragSubtype.ANTRAG (generic application)
+#   - subtype: Ergänzungsantrag
+#     enabled: true
+#     positive_patterns:
+#       - 'Ergänzungsantrag\s+auf\s+Pflegeversicherung\s+nach\s+Eilgutachten'
+#       - '(?m)^Ergänzungsantrag\s+auf\s+Pflegeversicherung'
+#     negative_patterns: []
+#   - subtype: Eilantrag
+#     enabled: true
+#     positive_patterns:
+#       - '(?i)\bEilantrag\b'
+#       - '(?i)\bEilbegutachtung\b'
+#       - '(?i)\bÜberleitungsbegutachtung\b'
+#       - '(?i)\bÜberleitungsgutachten\b'
+#       - '(?i)Informations[/-]Überleitungsbogen'
+#       - '(?i)(?:Nach\s+)?Aktenlage.*Überleitungsgutachten'
+#     negative_patterns:
+#       - 'Ergänzungsantrag'
+#   - subtype: Höherstufungsantrag
+#     enabled: true
+#     positive_patterns:
+#       - '(?i)\bHöherstufungsantrag\b'
+#       - '(?i)Höherstufung\s+(?:des\s+)?Pflegegrads?'
+#       - '(?i)Antrag\s+(?:auf\s+)?Höherstufung'
+#       - '(?i)Höhergruppierung'
+#     negative_patterns:
+#       - '(?i)\bEilantrag\b'
+#       - '(?i)\bEilbegutachtung\b'
+#       - 'Ergänzungsantrag'
+#   - subtype: Erstantrag
+#     enabled: true
+#     positive_patterns:
+#       - '(?i)\bErstantrag\b'
+#       - '(?i)Antrag\s+(?:auf\s+)?(?:Anerkennung\s+(?:einer\s+)?)?Pflegebedürftigkeit'
+#       - '(?i)Erstmalige\s+Antrag.*Pflegegrad'
+#     negative_patterns:
+#       - '(?i)\bEilantrag\b'
+#       - '(?i)\bHöherstufungsantrag\b'
+#       - 'Ergänzungsantrag'
+
+
+
+
+
+readiness_checks:
+  enabled: true
+  postgres:
+    enabled: true
+    check_interval_minutes: 5
+  s3:
+    enabled: true
+    check_interval_minutes: 5
+  llm:
+    enabled: true
+    check_interval_minutes: 5
+  azure_di:
+    enabled: true
+    check_interval_minutes: 5
+  doc_deliver:
+    enabled: true
+    check_interval_minutes: 5
+  netezza_dwh:
+    enabled: false
+    check_interval_minutes: 5
+  kafka:
+    enabled: true
+    check_interval_minutes: 5
+  fallakteneingang_ws:
+    # check_fed pings the endpoint with an empty-body SOAP envelope and
+    # interprets the answering fault pair (verified on the ABU stage):
+    # Receiver fault = ready, Sender/SecurityError fault = credentials
+    # rejected (logged as FED_CREDENTIALS_REJECTED), network error = down.
+    enabled: true
+    check_interval_minutes: 5
+
+timer_jobs:
+  - cron: "*/1 * * * *"
+    class: backend.src.jobs.trivial_logging_job.TrivialLoggingJob
+    config: {}
+    job_group: application
+  - cron: '* * * * *'
+    class: backend.src.jobs.pipeline_processing_job.PipelineProcessingJob
+    config:
+      system_prefix: 'internal/fallakten/'
+      summaries_internal_prefix: 'internal/summaries/'
+      summaries_output_prefix: 'output/'
+      stale_timeout_minutes: 60
+      delay_between_jobs_seconds: 5
+      max_number_of_retries: 3
+    job_group: pipeline_processing
+  - cron: '* * * * *'
+    class: backend.src.jobs.fed_delivery_dispatcher_job.FedDeliveryDispatcherJob
+    config:
+      stale_timeout_minutes: 60
+      max_number_of_retries: 3
+    job_group: fed_delivery
+  - cron: "0 0 * * *"
+    class: backend.src.jobs.artifact_retention_job.ArtifactRetentionJob
+    # The 21c case folder sweep reads its values (prefix, retention_days) from the
+    # top-level kafka_cases block - single source, not duplicated here.
+    config:
+      retention_days: 60
+      system_prefix: 'internal/fallakten/'
+      summaries_internal_prefix: 'internal/summaries/'
+    job_group: artifact_retention
+  - cron: "*/5 * * * *"
+    class: backend.src.jobs.classification_excel_generation_job.ClassificationEvaluationJob
+    config:
+      delay_between_jobs_seconds: 5
+    job_group: classification_evaluation
+  - cron: "*/10 * * * *"
+    class: backend.src.jobs.classification_feedback_ingest_job.ClassificationFeedbackIngestJob
+    config: {}
+    job_group: classification_feedback_ingest
+  - cron: "*/5 * * * *"
+    class: backend.src.jobs.readiness_check_job.ReadinessCheckJob
+    config: {}
+    job_group: readiness
+  - cron: "*/5 * * * *"
+    class: backend.src.jobs.failed_jobs_retry_job.FailedJobsRetryJob
+    config:
+      max_number_of_retries: 3
+    job_group: failed_jobs_retry
+  - cron: "* * * * *"
+    class: backend.src.jobs.retrieve_classification_fallakten_job.RetrieveClassificationFallaktenJob
+    config:
+        number_of_fallakten: 1
+        date_from: 2025-04-01
+        date_to: 2023-04-01
+        store_prefix: "Evaluation_Klassifizierung/fallakten_retrieved_from_dms"
+    job_group: retrieve_classification_fallakten
+
+thread_manager:
+  # Interval (in seconds) for thread health checks. Increase for less frequent checks, decrease for faster detection of thread issues.
+  health_check_interval_seconds: 30
+  pools:
+    # Configure worker pools for different job types. Each pool can have its own max_workers.
+    scheduler:
+      max_workers: 1
+    pipeline_processing:
+      # Parallel workers for the job queue (design: 1 replica x n workers; raise deliberately).
+      max_workers: 2
+    fed_delivery:
+      # SOAP send is cheap; one worker keeps ordering simple.
+      max_workers: 1
+    classification_evaluation:
+      max_workers: 1
+
+pipeline_processing:
+  # Flag for toggling createn of html artifacts of summaries. Only affecting manual ('initiator'-based processing)
+  create_html_artifact: true
+
+# Deduplication cascade (document-level dedup within a case file; conservative defaults)
+deduplication:
+  similarity_duplicate: 0.97    # at/above this similarity + no handwriting difference -> duplicate
+  similarity_candidate: 0.80    # below this similarity -> unrelated
+  handwriting_delta_min: 1      # handwriting-page difference that flags an annotated (contests) pair
+  page_count_tolerance: 1       # allowed page-count difference for a candidate pair
+  ngram_n: 3                    # character n-gram length for fuzzy similarity
+
+
+
+
+#
+#  Configuration for Integration into Aktionssteuerung 21c
+#
+
+# Inbound leg (21c -> KI): Kafka Fallakte consumer on/off.
+# log_message_body dumps raw payloads (Sozialdaten!) - opt-in on dev/test with
+# synthetic data ONLY. MUST be false in production; treat any prod log containing
+# payloads as an incident. Template default is false so prod configs derived from
+# this file are safe by default.
+kafka_consumer:
+  enabled: true
+  log_message_body: false
+
+# Outbound leg (KI -> 21c): SOAP delivery via the FED endpoint.
+# false = consume and process without calling 21c (dev/test dry-run, prod kill switch).
+fed_delivery:
+  enabled: true
+
+# Development trigger endpoint (POST /dev/kafka-intake). Runs the identical intake
+# path as a broker message. dev/test only - MUST stay false in production.
+dev_trigger:
+  enabled: false
+
+# 21c case folders in S3: raw message, retrieved documents, raw Azure DI results.
+# retention_days: sweep deletes folders whose newest object is older than this.
+# Retry budgets live in the dispatcher job configs (max_number_of_retries), not here.
+kafka_cases:
+  prefix: internal/21c_cases/
+  retention_days: 90
+
+# Configuration for Requests to the 21c Kafka Message broker endpoint
+kafka_config:
+  bootstrap_servers: dak-extern-kafka-auth-bootstrap-edi-kafka-01554-extern-test.apps.ham-test01.mauintra.de:443 # Comma-separated list of Kafka servers
+  topic: robotics-01554-as-information-a01001 # The topic to listen for doc_ids
+  group_id: robotics-01554
+  auto_offset_reset: latest # test: skip stale messages when no committed offset exists; prod: earliest
+  s_ssl_keystore_base64: SSL_KEYSTORE_BASE64
+  s_ssl_truststore_base64: SSL_TRUSTSTORE_BASE64
+  s_ssl_keystore_password: SSL_KEYSTORE_PASSWORD
+  s_ssl_truststore_password: SSL_TRUSTSTORE_PASSWORD
+
+# Configuration for SOAP Requests to the 21c FED Endpoint
+fallakteneingang_ws:
+  url: https://vip-abu-21c-dialogweb.prod7330.dakitest.de:9000/partner_webservices/FallakteneingangsdatenWS #itestf
+  s_username: FALLAKTENEINGANG_USERNAME # wird zu username@01554-robotics
+  s_password: FALLAKTENEINGANG_PASSWORT
+  username_suffix: '01554' # 01554-robotics is NO valid username_suffix
+  verify_tls: true
+  request_timeout: 60
+
+doc_deliver:
+  url: DOC_DELIVER_URL
+  s_user: DOC_DELIVER_USER
+  s_pwd: DOC_DELIVER_PASSWORD
+  test_doc_id: 3954420
+  client_id: xxx
+  tls_verification: true
