@@ -17,7 +17,7 @@ in a separate **project layer** that is plugged into a fixed slot.
 │   ├── docker-compose.yml        generic: sandbox, proxy, networks, generic mounts
 │   ├── initialize.sh             host-side: checks slot + prerequisites, builds images
 │   ├── compose.sh                'docker compose' with all compose files
-│   ├── base/                     generic image: zsh, git, rg, fd, jq, uv (no agent)
+│   ├── base/                     generic image: zsh, vim, git, rg, fd, jq, fzf, uv (no agent)
 │   ├── modules/                  agent CLIs, each with Dockerfile, allowlist, mounts
 │   │   ├── claude/               Claude Code (+ managed settings, Stop hook)
 │   │   ├── copilot/              GitHub Copilot CLI

@@ -85,10 +85,11 @@ network, so e.g. `uv sync` against a private index works during the build.
 | `docker-compose.yml` | **The generic config:** build, mounts, capabilities, networks, proxy env. |
 | `initialize.sh` | Runs on the host before start: checks the slot and prerequisites, builds base + module images, generates `.generated/`. |
 | `compose.sh` | `docker compose` with all compose files. Use it instead of bare `docker compose`. |
-| `base/Dockerfile` | Generic image: Node, zsh, git, rg, fd, jq, python3, uv, `dev` user. No agent CLI. |
+| `base/Dockerfile` | Generic image: Node, zsh, vim, git, rg, fd, jq, fzf, shellcheck, python3, uv, `dev` user. No agent CLI. |
 | `base/check-exclusions.sh` | The check. Installed in the image as `/usr/local/bin/check-exclusions`. |
 | `base/run-guarded.sh` | Installed as `run-guarded`. Runs the check, then the given command. Every agent wrapper calls it. |
-| `base/.zshrc` | Shell config for the `dev` user. |
+| `base/.zshrc` | Shell config for the `dev` user (vi mode, fzf, autosuggestions, syntax highlighting). |
+| `base/.vimrc` | Minimal vim config for the `dev` user. |
 | `modules/claude/` | Claude Code: install + wrapper (bypass mode), managed settings (attribution, Stop hook), allowlist, sandbox home mounts. |
 | `modules/copilot/` | GitHub Copilot CLI: install + wrapper, allowlist, token + state mounts. |
 | `modules/ntfy/` | Opt-in: allowlists `ntfy.sh` and mounts the topic for the Claude Stop hook. |

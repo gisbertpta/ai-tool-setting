@@ -4,11 +4,21 @@
 # layer's Dockerfile starts FROM the last module image.
 FROM node:lts-bookworm-slim
 
-ENV SHELL=/usr/bin/zsh
+ENV SHELL=/usr/bin/zsh \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    EDITOR=vim \
+    VISUAL=vim
 
-# System packages: shell, editor and the CLI tools the agents rely on
+# The slim image drops /usr/share/doc; keep fzf's shell/vim integration from it
+RUN echo 'path-include /usr/share/doc/fzf/examples/*' > /etc/dpkg/dpkg.cfg.d/zz-fzf-examples
+
+# System packages: shell, editor and the CLI tools the agents rely on,
+# plus the basics missing from the slim image (ps, less, file, archives, make)
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git zsh vim curl jq ripgrep fd-find ca-certificates python3 \
+        procps less file tree unzip zip xz-utils make patch shellcheck sqlite3 \
+        zsh-autosuggestions zsh-syntax-highlighting fzf \
     && rm -rf /var/lib/apt/lists/* \
     && ln -s /usr/bin/fdfind /usr/local/bin/fd
 
@@ -29,6 +39,7 @@ RUN chmod +x /usr/local/bin/check-exclusions /usr/local/bin/run-guarded
 
 # User-specific dotfiles; history dir is a named volume (created with dev ownership)
 COPY --chown=dev:dev .zshrc /home/dev/.zshrc
+COPY --chown=dev:dev .vimrc /home/dev/.vimrc
 RUN install -d -o dev -g dev /home/dev/.local /home/dev/.local/state /home/dev/.local/state/zsh
 
 # Switch to dev user and set up workspace
