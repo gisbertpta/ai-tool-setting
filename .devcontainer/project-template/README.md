@@ -1,9 +1,10 @@
 # Project layer template
 
-Copy this folder to start a new project layer. Every file is required
-(`initialize.sh` checks for them), but each one may contain nothing but
-comments. Copied unchanged, the template gives you the plain generic sandbox:
-no extra tools, no masks, no extra domains.
+Copy this folder to start a new project layer. Every file except `modules`
+and `prereqs` is required (`initialize.sh` checks for them), but each one may
+contain nothing but comments. Copied unchanged, the template gives you the
+plain generic sandbox with Claude Code: no extra tools, no masks, no extra
+domains.
 
 | File | Purpose |
 |---|---|
@@ -12,6 +13,8 @@ no extra tools, no masks, no extra domains.
 | `Dockerfile.dockerignore` | Allowlist of workspace files the `Dockerfile` may `COPY`. The build context is the whole workspace. |
 | `excluded-files` | Paths that must be masked. `check-exclusions` checks them. |
 | `allowlist.txt` | Extra proxy domains. |
+| `prereqs` | Optional. Repos and host files that must exist (`initialize.sh` checks them). List every repo whose secrets are masked. |
+| `modules` | Optional. Agent modules to install (`claude`, `copilot`, see `.devcontainer/modules/`). Missing → `claude` only. |
 | `dummies/` | Placeholder copies of masked paths, mirroring the path: `dummies/<repo>/<path>`. |
 
 See "Starting a new project" in the envelope's [README](../../README.md).

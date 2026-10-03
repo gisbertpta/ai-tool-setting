@@ -1,55 +1,72 @@
 # AI dev envelope
 
 A reusable workspace that wraps one or more **working repos** in a sandboxed
-devcontainer for running Claude Code with permission prompts skipped.
+devcontainer for running agent CLIs (Claude Code, GitHub Copilot CLI) with
+permission prompts skipped.
 
 This repo holds **no project code**. It only holds the parts around the code:
-the generic container definition, the egress proxy, secret masking, Claude
-settings, and workspace-wide AI instructions. Everything that belongs to a
+the generic container definition, the agent modules, the egress proxy, secret
+masking, and workspace-wide AI instructions. Everything that belongs to a
 specific project (toolchain, dependencies, masked secrets, extra domains) lives
 in a separate **project layer** that is plugged into a fixed slot.
 
 ```
 /workspace                        ← this repo (the envelope)
 ├── .devcontainer/
-│   ├── devcontainer.json         entry point: base compose + project/compose.yml
+│   ├── devcontainer.json         entry point: base + modules + project compose files
 │   ├── docker-compose.yml        generic: sandbox, proxy, networks, generic mounts
-│   ├── initialize.sh             host-side: checks slot + prerequisites, builds base image
-│   ├── compose.sh                'docker compose' with both compose files
-│   ├── base/                     generic image: Claude Code, zsh, git, rg, fd, jq, uv
+│   ├── initialize.sh             host-side: checks slot + prerequisites, builds images
+│   ├── compose.sh                'docker compose' with all compose files
+│   ├── base/                     generic image: zsh, git, rg, fd, jq, uv (no agent)
+│   ├── modules/                  agent CLIs, each with Dockerfile, allowlist, mounts
+│   │   ├── claude/               Claude Code (+ managed settings, Stop hook)
+│   │   ├── copilot/              GitHub Copilot CLI
+│   │   └── ntfy/                 opt-in: Stop-hook notification via ntfy.sh
 │   ├── proxy/                    squid egress proxy + generic allowlist
-│   ├── .claude/                  Claude settings + hooks (mounted ro at /workspace/.claude)
+│   ├── .generated/               written by initialize.sh (not tracked)
 │   ├── project-template/         template for new project layers
 │   ├── project-ki-zfw-wm/        current project layer (temporary, will move out)
 │   └── project  ──symlink──►     SLOT: the active project layer (not tracked)
 ├── .dockerignore                 safety net for the build context (excludes everything)
-├── .gitignore                    ignores the slot
-├── CLAUDE.md                     workspace-wide AI instructions
+├── .gitignore                    ignores the slot and .generated/
+├── AGENTS.md                     workspace-wide AI instructions (all agents)
+├── CLAUDE.md                     imports AGENTS.md for Claude
 ├── README.md
 │
 ├── <working-repo-a>/             ┐ working repos: own git history, own AI instructions,
 └── <working-repo-b>/             ┘ NOT tracked here (ignored via .git/info/exclude)
 ```
 
-## Two layers
+## Three layers
 
-| | Envelope (this repo) | Project layer (slot `.devcontainer/project`) |
-|---|---|---|
-| Image | `base/Dockerfile` → `ai-envelope-base:latest`: Node, Claude Code, CLI tools, uv, `claude` user, exclusion check | `Dockerfile` `FROM` the base: system libs, CA certs, Python version, dependencies, pre-commit hooks |
-| Compose | sandbox/egress networks, proxy, capabilities, proxy env, `~/.claude` + `~/.gitconfig` mounts | compose `name`, masking mounts, build secrets, env vars |
-| Build context filter | `.dockerignore` (excludes everything) | `Dockerfile.dockerignore` (allowlist of files to `COPY`) |
-| Secret masking | `check-exclusions` (the mechanism) | `excluded-files` + `dummies/` (the paths) |
-| Egress | `proxy/allowlist.txt` (Claude, VS Code, ntfy) | `allowlist.txt` (extra domains) |
+| | Base (this repo) | Agent modules (this repo, `modules/<name>/`) | Project layer (slot `.devcontainer/project`) |
+|---|---|---|---|
+| Image | `base/Dockerfile` → `ai-envelope-base:latest`: Node, CLI tools, uv, `dev` user, exclusion check | `Dockerfile` per module, stacked: install the CLI behind a wrapper that runs the exclusion check | `Dockerfile` `FROM` the last module image: system libs, CA certs, Python version, dependencies, pre-commit hooks |
+| Compose | sandbox/egress networks, proxy, capabilities, proxy env, `~/.gitconfig` mount | `mounts` (agent home, token) | compose `name`, masking mounts, build secrets, env vars |
+| Selection | always | `modules` file in the project layer (default: `claude`) | the slot symlink |
+| Build context filter | `.dockerignore` (excludes everything) | the module folder | `Dockerfile.dockerignore` (allowlist of files to `COPY`) |
+| Secret masking | `check-exclusions` (the mechanism) | | `excluded-files` + `dummies/` (the paths) |
+| Egress | `proxy/allowlist.txt` (VS Code) | `allowlist.txt` (agent API, e.g. Anthropic, Copilot) | `allowlist.txt` (extra domains) |
+| Host prerequisites | `~/.gitconfig` | `prereqs` (e.g. `~/.claude-devcontainer`, Copilot token) | `prereqs` (required repos, build secrets) |
 
 How they are joined:
 
-- `devcontainer.json` loads `docker-compose.yml` **and** `project/compose.yml`.
-  Compose merges them, so the project file only adds to the generic one.
+- `initialize.sh` runs on the host before every start (cached, so usually
+  instant). It builds the base image, stacks the enabled modules on top
+  (`ai-envelope-mod-claude-copilot:latest`) and generates
+  `.generated/compose.yml` with the module mounts, the resulting image name and
+  read-only mounts for every working repo's `.git/config` + `.git/hooks`.
+- `devcontainer.json` loads `docker-compose.yml`, `.generated/compose.yml` and
+  `project/compose.yml`. Compose merges them, so each file only adds to the
+  previous ones.
 - The devcontainer service always builds `project/Dockerfile`, which starts
-  `FROM ai-envelope-base:latest`. `initialize.sh` builds that base image on the
-  host before every start (cached, so usually instant).
-- The proxy reads both `proxy/allowlist.txt` and `project/allowlist.txt`.
+  `FROM` the last module image (passed as `BASE_IMAGE`).
+- The proxy reads `proxy/allowlist.txt`, the merged module allowlists and
+  `project/allowlist.txt`.
 - `check-exclusions` reads `project/excluded-files` and `project/dummies/`.
+
+Details on modules (contents, adding one, the Copilot token):
+[`.devcontainer/modules/README.md`](.devcontainer/modules/README.md).
 
 The slot `.devcontainer/project` is a symlink (or a plain copy) and is ignored
 by git. Without it, `initialize.sh` refuses to start. That way you can't
@@ -82,7 +99,7 @@ The sandbox itself (how it works, debugging, security notes) is described in
    devcontainer up --workspace-folder .
    devcontainer exec --workspace-folder . zsh
    ```
-5. Inside the container, run `claude`.
+5. Inside the container, run `claude` (or `copilot`, if the layer enables it).
 
 ## Starting a new project
 
@@ -110,7 +127,14 @@ ln -s ../my-repo/ai-envelope .devcontainer/project
 ```
 
 (Just trying something out? `ln -s project-template .devcontainer/project`
-gives you the plain generic sandbox.)
+gives you the plain generic sandbox with Claude Code.)
+
+### 2b. Pick the agents (`modules`)
+
+List the agent modules the project needs in `modules`, e.g. `claude` and
+`copilot`. Each one has its own host prerequisites (`initialize.sh` tells you
+what's missing). For Copilot, create the token as described in
+[`.devcontainer/modules/README.md`](.devcontainer/modules/README.md#copilot-token).
 
 ### 3. Name the compose project
 
@@ -118,17 +142,16 @@ In `compose.yml`, set `name:` (e.g. `ai-envelope-myproject`). The containers
 are then called `ai-envelope-myproject-devcontainer-1` and `…-proxy-1`, and
 several projects can run side by side.
 
-### 4. Protect the layer itself
+### 4. Declare required repos and host files (`prereqs`)
 
-If the layer lives **outside** `.devcontainer/` (e.g. in `my-repo/`), the agent
-could edit it from inside the container: remove a mask, add a domain, change
-the Dockerfile. The next rebuild would then run that on your host. Mount the
-layer read-only (the template has this line commented out):
+List every working repo whose secrets you mask (step 5), e.g.
+`dir my-repo/.git`. A repo cloned under another name would otherwise run with
+its secrets unmasked, and `check-exclusions` can't tell. Host files the build
+needs (e.g. `~/.build-secrets/username`) go here too.
 
-```yaml
-volumes:
-  - ../my-repo/ai-envelope:/workspace/my-repo/ai-envelope:ro
-```
+You don't need to protect the layer itself: if it lives outside
+`.devcontainer/` (e.g. in `my-repo/`), `initialize.sh` mounts it read-only, so
+the agent can't remove a mask or change the Dockerfile for the next rebuild.
 
 ### 5. Mask secrets
 
@@ -150,13 +173,13 @@ Prefer masking whole directories over single files.
 
 ### 6. Add the toolchain (`Dockerfile`)
 
-Install what the project needs on top of the base image: system packages,
+Install what the project needs on top of the module images: system packages,
 company CA certificates, a Python version and dependencies via `uv`, pre-commit
 hooks, and so on. The template `Dockerfile` has commented examples for each.
 
 - Every file you `COPY` must be allowlisted in `Dockerfile.dockerignore`. The
   build context is the whole workspace, so never allowlist secret files.
-- Install environments **outside** `/workspace` (e.g. `/home/claude/.venv`).
+- Install environments **outside** `/workspace` (e.g. `/home/dev/.venv`).
   `/workspace` is bind-mounted over at runtime.
 - Private package indexes and git need credentials during the build: declare
   BuildKit secrets in `compose.yml` and use them with
@@ -173,7 +196,7 @@ file must exist, even if it only has comments.
 ### 8. Add project AI instructions
 
 Put repo-specific rules into the working repos themselves (`AGENTS.md`,
-`CLAUDE.md`, …), not into the envelope. [`CLAUDE.md`](CLAUDE.md) tells the
+`CLAUDE.md`, …), not into the envelope. [`AGENTS.md`](AGENTS.md) tells the
 agent to follow them.
 
 ### 9. Start and verify
@@ -213,9 +236,10 @@ to the envelope, or setup changes to a working repo.
 The ki-zfw-wm project layer still lives in this repo as
 [`.devcontainer/project-ki-zfw-wm/`](.devcontainer/project-ki-zfw-wm/) and will
 move into the project later (planned: `ki-zfw-wm-umbrella`). After the move,
-re-point the slot symlink, add the read-only mount from step 4, and delete
+re-point the slot symlink and delete
 the folder here.
 
-Known security gaps (writable host `~/.claude`, the ntfy Stop hook, allowlisted
-domains as exfiltration channels) are listed in
+What the sandbox protects against, and what not (VS Code host channels,
+tokens readable by the agent, allowlisted domains as exfiltration channels),
+is listed in
 [`.devcontainer/README.md`](.devcontainer/README.md#security-notes--known-gaps).

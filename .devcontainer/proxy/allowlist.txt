@@ -1,14 +1,7 @@
 # Generic domains the sandbox may reach (squid dstdomain syntax: leading dot = incl. subdomains).
-# Project-specific domains go into the project layer's allowlist.txt.
+# Agent domains live in modules/<name>/allowlist.txt, project domains in the
+# project layer's allowlist.txt.
 # Keep this short. After changes: .devcontainer/compose.sh restart proxy
-
-# Claude Code: API, login/token refresh
-.anthropic.com
-.claude.ai
-.claude.com
-
-# Stop-hook notifications (.claude/scripts/notify-ntfy.sh) — remove if the hook goes
-ntfy.sh
 
 # VS Code server + extensions (gitlens) installed inside the container
 update.code.visualstudio.com

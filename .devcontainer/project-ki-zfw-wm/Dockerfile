@@ -15,20 +15,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY ki-zfw-wm-code/bitmarck-ca-chain.crt /usr/local/share/ca-certificates/bitmarck-ca-chain.crt
 RUN update-ca-certificates
 
-USER claude
-ENV PATH="/home/claude/.venv/bin:${PATH}"
-ENV VIRTUAL_ENV="/home/claude/.venv"
-ENV UV_PROJECT_ENVIRONMENT="/home/claude/.venv"
+USER dev
+ENV PATH="/home/dev/.venv/bin:${PATH}"
+ENV VIRTUAL_ENV="/home/dev/.venv"
+ENV UV_PROJECT_ENVIRONMENT="/home/dev/.venv"
 
 # Copy dependency files and install Python dependencies (uv comes from the base image)
 # Secrets are mounted and used only within this single layer, then cleaned up
-COPY --chown=claude:claude ki-zfw-wm-code/pyproject.toml ki-zfw-wm-code/uv.lock ki-zfw-wm-code/README.md ki-zfw-wm-code/.pre-commit-config.yaml ./
+COPY --chown=dev:dev ki-zfw-wm-code/pyproject.toml ki-zfw-wm-code/uv.lock ki-zfw-wm-code/README.md ki-zfw-wm-code/.pre-commit-config.yaml ./
 RUN --mount=type=secret,id=git-username,uid=1000 \
     --mount=type=secret,id=git-password,uid=1000 \
     git config --global credential.helper '!f() { echo "username=$(cat /run/secrets/git-username)"; echo "password=$(cat /run/secrets/git-password)"; }; f' && \
     echo "---> Installing dependencies ..." && \
     uv python install 3.11 && \
-    uv venv /home/claude/.venv --python-preference managed --python 3.11 && \
+    uv venv /home/dev/.venv --python-preference managed --python 3.11 && \
     uv sync --locked --python-preference managed --python 3.11 --group main --group dev \
       --trusted-host artifactory.dakentw007200.de \
       --trusted-host pypi.org \
@@ -36,12 +36,12 @@ RUN --mount=type=secret,id=git-username,uid=1000 \
     git config --global --unset credential.helper
 
 # Cache the tiktoken encoding file
-ENV TIKTOKEN_CACHE_DIR="/home/claude/.tiktoken_cache/"
+ENV TIKTOKEN_CACHE_DIR="/home/dev/.tiktoken_cache/"
 RUN echo "---> Loading tiktoken encoding ..." && \
-    /home/claude/.venv/bin/python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"
+    /home/dev/.venv/bin/python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"
 
 # Verify daktools is installed correctly
-RUN /home/claude/.venv/bin/python -c "import sys; print(f'Python path: {sys.path}'); import daktools; print(f'daktools found at {daktools.__file__}')"
+RUN /home/dev/.venv/bin/python -c "import sys; print(f'Python path: {sys.path}'); import daktools; print(f'daktools found at {daktools.__file__}')"
 
 # Pre-install pre-commit hooks so they work offline
 RUN --mount=type=secret,id=git-username,uid=1000 \

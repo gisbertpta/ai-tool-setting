@@ -1,0 +1,6 @@
+# Domains for the Claude Code module (squid dstdomain syntax: leading dot = incl. subdomains).
+
+# Claude Code: API, login/token refresh
+.anthropic.com
+.claude.ai
+.claude.com

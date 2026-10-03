@@ -51,9 +51,16 @@ while IFS= read -r relpath || [ -n "$relpath" ]; do
   target="${WORKSPACE}/${relpath}"
   dummy="${DUMMY_DIR}/${relpath}"
 
-  # 1. Absent — nothing to leak
+  # 1. Absent — nothing to leak. But if the whole repo (first path component) is
+  #    missing, it may just be cloned under another name, with its secrets unmasked.
   if [ ! -e "$target" ]; then
     printf "  OK (absent)  %s\n" "$relpath"
+    repo="${relpath%%/*}"
+    if [ "$repo" != "$relpath" ] && [ ! -e "${WORKSPACE}/${repo}" ]; then
+      echo "               NOTE: ${repo}/ does not exist. If it is cloned under another"
+      echo "               name, its secrets are NOT masked. Required repos belong in"
+      echo "               the project layer's prereqs."
+    fi
     continue
   fi
 

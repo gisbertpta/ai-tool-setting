@@ -1,7 +1,7 @@
-# ~/.zshrc — minimal config for Claude Code devcontainer
+# ~/.zshrc — minimal config for the AI sandbox devcontainer
 
 # ── History ───────────────────────────────────────────────────────────────────
-HISTFILE=~/.zsh_history
+HISTFILE=~/.local/state/zsh/history   # named volume, survives rebuilds
 HISTSIZE=5000
 SAVEHIST=5000
 setopt HIST_IGNORE_DUPS SHARE_HISTORY

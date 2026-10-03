@@ -1,0 +1,3 @@
+# ntfy.sh for the Claude Stop-hook notification.
+# Note: the agent can post anything to ANY ntfy topic through this domain.
+ntfy.sh

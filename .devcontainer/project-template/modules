@@ -1,0 +1,6 @@
+# Agent modules for this project, one per line, from .devcontainer/modules/.
+# Images are stacked in this order. Without this file: claude only.
+# After changes: rebuild the container.
+claude
+# copilot
+# ntfy        # Claude Stop-hook notification via ntfy.sh (needs a topic file)

@@ -1,5 +1,6 @@
-# Project layer — image part. Starts from the generic base image
-# (Claude Code, zsh, git, rg, fd, jq, uv, user 'claude', exclusion check).
+# Project layer — image part. Starts from the last image of the module chain:
+# generic base (zsh, git, rg, fd, jq, uv, user 'dev', exclusion check) plus the
+# agent CLIs enabled in 'modules'. initialize.sh passes it as BASE_IMAGE.
 # Build context: the workspace root. Only files allowlisted in
 # Dockerfile.dockerignore are visible to COPY.
 ARG BASE_IMAGE=ai-envelope-base:latest
@@ -14,15 +15,15 @@ FROM ${BASE_IMAGE}
 #     && rm -rf /var/lib/apt/lists/*
 # COPY my-repo/company-ca.crt /usr/local/share/ca-certificates/company-ca.crt
 # RUN update-ca-certificates
-# USER claude
+# USER dev
 
 # ── Python toolchain + dependencies via uv ────────────────────────────────────
-# Installs into /home/claude/.venv (outside /workspace, so the bind-mounted
+# Installs into /home/dev/.venv (outside /workspace, so the bind-mounted
 # working repos don't hide it).
-# ENV PATH="/home/claude/.venv/bin:${PATH}"
-# ENV VIRTUAL_ENV="/home/claude/.venv"
-# ENV UV_PROJECT_ENVIRONMENT="/home/claude/.venv"
-# COPY --chown=claude:claude my-repo/pyproject.toml my-repo/uv.lock ./
+# ENV PATH="/home/dev/.venv/bin:${PATH}"
+# ENV VIRTUAL_ENV="/home/dev/.venv"
+# ENV UV_PROJECT_ENVIRONMENT="/home/dev/.venv"
+# COPY --chown=dev:dev my-repo/pyproject.toml my-repo/uv.lock ./
 # RUN uv python install 3.12 \
 #     && uv sync --locked --python 3.12
 

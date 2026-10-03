@@ -1,0 +1,2 @@
+# <file|dir> <path> <hint>
+file ${HOME}/.config/ai-envelope/ntfy-topic  (umask 077; openssl rand -hex 16 > ~/.config/ai-envelope/ntfy-topic)

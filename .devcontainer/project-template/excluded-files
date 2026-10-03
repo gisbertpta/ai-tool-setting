@@ -6,8 +6,8 @@
 #   - ./project/dummies/<path>:/workspace/<path>:ro           # replace with a dummy
 # A dummy mirrors the masked path under dummies/ and holds placeholder values only.
 #
-# check-exclusions verifies every path at container start, and 'claude'
-# refuses to start if one is not masked.
+# check-exclusions verifies every path at container start, and every agent CLI
+# (claude, copilot) refuses to start if one is not masked.
 #
 # Prefer masking whole directories over single files.
 #

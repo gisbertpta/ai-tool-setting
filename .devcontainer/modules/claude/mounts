@@ -1,0 +1,7 @@
+# Volumes added to the devcontainer service (compose short syntax, one per line).
+# Relative paths resolve against .devcontainer/.
+
+# Claude home + state file: sandbox-only, NOT your host ~/.claude. The agent can
+# write here, so nothing in it may ever be used by Claude on the host.
+${HOME}/.claude-devcontainer:/home/dev/.claude:cached
+${HOME}/.claude-devcontainer.json:/home/dev/.claude.json:cached

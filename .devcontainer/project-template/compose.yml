@@ -23,10 +23,8 @@ services:
     #   - /dev/null:/workspace/my-repo/.env:ro                                    # blank a file
     #   - ./project/dummies/my-repo/config:/workspace/my-repo/config:ro          # replace with a dummy
     #
-    #   # If this layer lives OUTSIDE .devcontainer/ (e.g. in a working repo),
-    #   # mount it read-only at its own workspace path, so the agent can't edit
-    #   # its sandbox config (masks, allowlist, Dockerfile) from inside:
-    #   - ../my-umbrella-repo/ai-envelope:/workspace/my-umbrella-repo/ai-envelope:ro
+    #   # Not needed: initialize.sh mounts this layer read-only by itself if it
+    #   # lives outside .devcontainer/, and the working repos' .git/config + hooks.
 
     # environment:
     #   MY_TOOL_SETTING: value

@@ -1,0 +1,10 @@
+# Optional. Paths that must exist before start: <file|dir> <path> <hint>
+# Relative paths are relative to the workspace root; ${HOME} and ~ are expanded.
+# initialize.sh refuses to start if one is missing.
+#
+# List every working repo whose secrets are masked: a repo cloned under another
+# name would otherwise run with its secrets unmasked.
+# dir  my-repo/.git                    git clone <url> my-repo
+#
+# Host files the build or the mounts need:
+# file ${HOME}/.build-secrets/username  Git/registry user for the build

@@ -1,0 +1,7 @@
+# Volumes added to the devcontainer service (compose short syntax, one per line).
+# Relative paths resolve against .devcontainer/.
+
+# Fine-grained PAT ("Copilot Requests" only), read by copilot-wrapper.sh
+${HOME}/.config/ai-envelope/copilot-token:/run/secrets/copilot-token:ro
+# Copilot config/state (trusted folders, sessions) — a sandbox-only dir, not your host ~/.copilot
+${HOME}/.copilot-devcontainer:/home/dev/.copilot:cached

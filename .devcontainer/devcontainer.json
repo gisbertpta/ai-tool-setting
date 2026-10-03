@@ -1,15 +1,35 @@
 {
-  "name": "Claude Code Sandbox",
-  // Host-side: checks the project layer + prerequisites, builds the base image
+  "name": "AI Sandbox",
+  // Host-side: checks the project layer + prerequisites, builds base + module images,
+  // generates .generated/compose.yml
   "initializeCommand": "bash \"${localWorkspaceFolder}/.devcontainer/initialize.sh\"",
-  // Generic part + project layer (the slot .devcontainer/project/ is not tracked in this repo).
-  // Build, mounts, capabilities and network isolation live in these compose files.
-  "dockerComposeFile": ["docker-compose.yml", "project/compose.yml"],
+  // Generic part + enabled modules (generated) + project layer (the slot
+  // .devcontainer/project/ is not tracked in this repo). Build, mounts, capabilities
+  // and network isolation live in these compose files. Keep in sync with compose.sh.
+  "dockerComposeFile": ["docker-compose.yml", ".generated/compose.yml", "project/compose.yml"],
   "service": "devcontainer",
   "workspaceFolder": "/workspace",
   "shutdownAction": "stopCompose",
   "postStartCommand": "check-exclusions",
-  "remoteUser": "claude",
+  "remoteUser": "dev",
+  // Cut the host channels VS Code forwards into the container (they bypass the
+  // proxy): host git credentials, SSH/GPG agent, opening URLs in the host browser,
+  // host IPC. VS Code may re-inject some of them into its own terminals, so run
+  // agents in a 'devcontainer exec' shell when it matters. See README "Security notes".
+  "remoteEnv": {
+    "SSH_AUTH_SOCK": "",
+    "GPG_AGENT_INFO": "",
+    "BROWSER": "",
+    "GIT_ASKPASS": "",
+    "VSCODE_GIT_ASKPASS_MAIN": "",
+    "VSCODE_GIT_ASKPASS_NODE": "",
+    "VSCODE_GIT_ASKPASS_EXTRA_ARGS": "",
+    "VSCODE_GIT_IPC_HANDLE": "",
+    "REMOTE_CONTAINERS_IPC": "",
+    "REMOTE_CONTAINERS_SOCKETS": "",
+    "REMOTE_CONTAINERS_DISPLAY_SOCK": "",
+    "WAYLAND_DISPLAY": ""
+  },
   "customizations": {
     "vscode": {
       "extensions": ["eamodio.gitlens"],

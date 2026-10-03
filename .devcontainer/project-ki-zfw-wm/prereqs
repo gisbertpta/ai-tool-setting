@@ -1,0 +1,9 @@
+# Paths that must exist before start: <file|dir> <path> <hint>
+# Relative paths are relative to the workspace root.
+
+# Working repo with the masked secrets: must exist under exactly this name
+dir  ki-zfw-wm-code/.git               git clone <ki-zfw-wm-code-url> ki-zfw-wm-code
+
+# Git/Artifactory credentials, used only during the build
+file ${HOME}/.build-secrets/username   Git/Artifactory user name
+file ${HOME}/.build-secrets/password   Git/Artifactory password or token

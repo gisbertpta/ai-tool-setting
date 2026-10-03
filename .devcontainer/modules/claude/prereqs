@@ -1,0 +1,4 @@
+# Host paths that must exist before start: <file|dir> <path> <hint>
+# A missing bind-mount source would be created by Docker as a DIRECTORY.
+dir  ${HOME}/.claude-devcontainer       mkdir ~/.claude-devcontainer
+file ${HOME}/.claude-devcontainer.json  echo '{}' > ~/.claude-devcontainer.json

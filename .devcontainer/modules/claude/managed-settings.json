@@ -1,6 +1,4 @@
 {
-  "dangerouslySkipPermissions": true,
-  "autoUpdaterStatus": "disabled",
   "attribution": {
     "commit": "",
     "pr": "",
@@ -9,15 +7,14 @@
   "hooks": {
     "Stop": [
       {
-        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "bash $CLAUDE_PROJECT_DIR/.claude/scripts/notify-ntfy.sh",
+            "command": "/usr/local/libexec/ai-envelope/notify-ntfy.sh",
             "timeout": 10
           }
         ]
       }
     ]
- }
+  }
 }

@@ -5,8 +5,7 @@ Project layer for the `ki-zfw-wm-*` working repos (`ki-zfw-wm-code`,
 
 **Temporary location.** This layer is kept in the envelope repo only until it
 moves into the project (planned: `ki-zfw-wm-umbrella`). After moving it, update
-the slot symlink and add the read-only mount described in
-[`../project-template/compose.yml`](../project-template/compose.yml).
+the slot symlink. `initialize.sh` then mounts the layer read-only by itself.
 
 Activate it in a clone of the envelope:
 
@@ -21,8 +20,10 @@ ln -s project-ki-zfw-wm .devcontainer/project
 | `compose.yml` | Compose name, build secrets (`~/.build-secrets/`), masking mounts |
 | `excluded-files` | Masked paths: `configs/`, `build-secret/`, `backend/scripts/.env` |
 | `allowlist.txt` | Extra proxy domains (none active) |
+| `prereqs` | `ki-zfw-wm-code` must be cloned under that name; build secrets must exist |
 | `dummies/` | Placeholder copies of the masked paths. **Placeholder values only.** |
 
-Host prerequisites in addition to the generic ones:
-`~/.build-secrets/username` and `~/.build-secrets/password`
-(Git/Artifactory credentials, used only during the build).
+Host prerequisites in addition to the generic ones (checked by `initialize.sh`
+via `prereqs`): `~/.build-secrets/username` and `~/.build-secrets/password`
+(Git/Artifactory credentials, used only during the build), and the clone
+`ki-zfw-wm-code/` in the workspace root.
