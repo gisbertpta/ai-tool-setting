@@ -1,7 +1,0 @@
-# Project-specific domains the sandbox may reach (in addition to proxy/allowlist.txt).
-# squid dstdomain syntax: leading dot = incl. subdomains.
-# After changes: .devcontainer/compose.sh restart proxy
-
-# Optional — uncomment only if needed from inside the container:
-# git.bitmarck.de                 # git fetch/push (container has no git credentials today)
-# artifactory.dakentw007200.de    # `uv add` / `uv sync` at runtime (build-time install is unaffected)

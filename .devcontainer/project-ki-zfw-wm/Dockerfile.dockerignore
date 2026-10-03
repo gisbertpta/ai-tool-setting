@@ -1,8 +1,0 @@
-# Build context is the workspace root (working repos + their secrets).
-# Allowlist approach: exclude everything, then permit what the Dockerfile COPYs.
-*
-!ki-zfw-wm-code/bitmarck-ca-chain.crt
-!ki-zfw-wm-code/pyproject.toml
-!ki-zfw-wm-code/uv.lock
-!ki-zfw-wm-code/README.md
-!ki-zfw-wm-code/.pre-commit-config.yaml
