@@ -1,15 +1,6 @@
-# ── Build context: parent dir (contains .devcontainer/, code-repo/, specs-repo/) ─
-# Allowlist approach: exclude everything, then explicitly permit what the
-# Dockerfile needs. Only Dockerfile and .zshrc need to reach the image.
-# specs-repo/ is excluded implicitly — nothing below allows it back in.
-
+# Safety net: the devcontainer build context is the workspace root, which holds
+# the working repos and their secrets. The project layer's
+# Dockerfile.dockerignore (next to its Dockerfile) takes precedence and
+# allowlists what the build needs. If it is ever not picked up, this file
+# makes the build fail loudly instead of sending the whole workspace.
 *
-!.devcontainer/Dockerfile
-!.devcontainer/.zshrc
-!.devcontainer/check-exclusions.sh
-!.devcontainer/claude-wrapper.sh
-!ki-zfw-wm-code/bitmarck-ca-chain.crt
-!ki-zfw-wm-code/pyproject.toml
-!ki-zfw-wm-code/uv.lock
-!ki-zfw-wm-code/README.md
-!ki-zfw-wm-code/.pre-commit-config.yaml

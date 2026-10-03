@@ -1,0 +1,9 @@
+# Project-specific domains the sandbox may reach, in addition to the generic
+# .devcontainer/proxy/allowlist.txt. squid dstdomain syntax: a leading dot
+# includes subdomains. This file must exist, even if it is empty.
+# After changes: .devcontainer/compose.sh restart proxy
+#
+# Every domain here is a place the agent can send data to. Keep it short.
+#
+# .pypi.org
+# files.pythonhosted.org

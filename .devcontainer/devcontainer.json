@@ -1,7 +1,10 @@
 {
   "name": "Claude Code Sandbox",
-  // Build, mounts, capabilities and network isolation live in docker-compose.yml
-  "dockerComposeFile": "docker-compose.yml",
+  // Host-side: checks the project layer + prerequisites, builds the base image
+  "initializeCommand": "bash \"${localWorkspaceFolder}/.devcontainer/initialize.sh\"",
+  // Generic part + project layer (the slot .devcontainer/project/ is not tracked in this repo).
+  // Build, mounts, capabilities and network isolation live in these compose files.
+  "dockerComposeFile": ["docker-compose.yml", "project/compose.yml"],
   "service": "devcontainer",
   "workspaceFolder": "/workspace",
   "shutdownAction": "stopCompose",

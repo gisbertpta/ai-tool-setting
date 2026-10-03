@@ -1,0 +1,24 @@
+# Project layer for ki-zfw-wm — merged on top of .devcontainer/docker-compose.yml.
+# Relative paths resolve against .devcontainer/, so this layer is addressed via
+# the slot path ./project/ (works no matter where the layer really lives).
+
+name: ai-envelope-ki-zfw-wm
+
+services:
+  devcontainer:
+    build:
+      # Git/Artifactory credentials for 'uv sync' and pre-commit during the build
+      secrets:
+        - git-username
+        - git-password
+    volumes:
+      # Masked secrets (keep in sync with excluded-files)
+      - ./project/dummies/ki-zfw-wm-code/configs:/workspace/ki-zfw-wm-code/configs:ro
+      - ./project/dummies/ki-zfw-wm-code/build-secret:/workspace/ki-zfw-wm-code/build-secret:ro
+      - /dev/null:/workspace/ki-zfw-wm-code/backend/scripts/.env:ro
+
+secrets:
+  git-username:
+    file: ${HOME}/.build-secrets/username
+  git-password:
+    file: ${HOME}/.build-secrets/password

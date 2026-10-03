@@ -1,0 +1,3 @@
+# Project layer slot: a symlink (or copy) per clone, never committed here.
+# No trailing slash, so it also matches a symlink.
+/.devcontainer/project

@@ -1,0 +1,6 @@
+# Build context is the workspace root (working repos + their secrets).
+# Allowlist approach: exclude everything, then permit exactly what the
+# Dockerfile COPYs. Never allowlist secret files.
+*
+# !my-repo/pyproject.toml
+# !my-repo/uv.lock

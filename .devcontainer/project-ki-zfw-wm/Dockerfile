@@ -1,59 +1,30 @@
-FROM node:lts-bookworm-slim
+# Project layer image for ki-zfw-wm: generic base + project toolchain and deps.
+# Build context: workspace root (see Dockerfile.dockerignore for what is sent).
+ARG BASE_IMAGE=ai-envelope-base:latest
+FROM ${BASE_IMAGE}
 
-ENV SHELL=/usr/bin/zsh
+USER root
 
-# System packages (add python3 + pip so uv can be installed)
+# Build tools/libs for the Python deps (Netezza ODBC, PDF/text rendering)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git zsh vim curl jq ripgrep fd-find ca-certificates \
-        python3 python3-pip python3-dev \
-        g++ unixodbc-dev \
+        python3-dev g++ unixodbc-dev \
         libglib2.0-0 libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 libfontconfig1 \
-    && rm -rf /var/lib/apt/lists/* \
-    && ln -s /usr/bin/fdfind /usr/local/bin/fd
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Claude Code globally
-RUN npm install -g @anthropic-ai/claude-code@latest
+# Company CA (Artifactory / internal hosts)
+COPY ki-zfw-wm-code/bitmarck-ca-chain.crt /usr/local/share/ca-certificates/bitmarck-ca-chain.crt
+RUN update-ca-certificates
 
-# Replace the default 'node' user with 'claude' at UID/GID 1000
-RUN userdel -f node 2>/dev/null || true \
-    && groupdel node 2>/dev/null || true \
-    && groupadd --gid 1000 claude \
-    && useradd --uid 1000 --gid 1000 --shell /usr/bin/zsh \
-               --create-home --home-dir /home/claude claude
-
-# Set up Claude wrapper scripts
-# (context is now the parent dir, .devcontainer/ is still a direct child — unchanged)
-COPY --chown=root:root .devcontainer/check-exclusions.sh /usr/local/bin/check-exclusions
-RUN chmod +x /usr/local/bin/check-exclusions \
-    && mv $(which claude) /usr/local/bin/claude.real
-COPY --chown=root:root .devcontainer/claude-wrapper.sh /usr/local/bin/claude
-RUN chmod +x /usr/local/bin/claude
-
-# User-specific dotfiles
-COPY --chown=claude:claude .devcontainer/.zshrc /home/claude/.zshrc
-
-# Switch to claude user and set up workspace
-RUN mkdir -p /workspace && chown claude:claude /workspace
 USER claude
-ENV PATH="/home/claude/.venv/bin:/home/claude/.local/bin:${PATH}"
+ENV PATH="/home/claude/.venv/bin:${PATH}"
 ENV VIRTUAL_ENV="/home/claude/.venv"
 ENV UV_PROJECT_ENVIRONMENT="/home/claude/.venv"
-WORKDIR /workspace
 
-# Copy dependency files and install Python dependencies
+# Copy dependency files and install Python dependencies (uv comes from the base image)
 # Secrets are mounted and used only within this single layer, then cleaned up
-# NOTE: now sourced from ki-zfw-wm-code/ since context is the parent
-COPY ki-zfw-wm-code/bitmarck-ca-chain.crt /usr/local/share/ca-certificates/bitmarck-ca-chain.crt
-USER root
-RUN update-ca-certificates
-USER claude
-
-
 COPY --chown=claude:claude ki-zfw-wm-code/pyproject.toml ki-zfw-wm-code/uv.lock ki-zfw-wm-code/README.md ki-zfw-wm-code/.pre-commit-config.yaml ./
 RUN --mount=type=secret,id=git-username,uid=1000 \
     --mount=type=secret,id=git-password,uid=1000 \
-    echo "---> Installing uv ..." && \
-    pip install --no-cache-dir --break-system-packages uv==0.8.6 && \
     git config --global credential.helper '!f() { echo "username=$(cat /run/secrets/git-username)"; echo "password=$(cat /run/secrets/git-password)"; }; f' && \
     echo "---> Installing dependencies ..." && \
     uv python install 3.11 && \
@@ -83,5 +54,3 @@ RUN --mount=type=secret,id=git-username,uid=1000 \
     cd / && \
     rm -rf /tmp/pre-commit-init && \
     git config --global --unset credential.helper
-
-CMD ["zsh"]

@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends squid \
     && rm -rf /var/lib/apt/lists/*
 
 COPY squid.conf /etc/squid/squid.conf
-COPY allowlist.txt /etc/squid/allowlist.txt
+# allowlist.txt and the project's allowlist are bind-mounted by docker-compose.yml
 
 EXPOSE 3128
 # Run squid in the foreground and stream the access log; the container exits if squid dies

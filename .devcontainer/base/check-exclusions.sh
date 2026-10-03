@@ -4,34 +4,41 @@
 # Called automatically at container start via postStartCommand in devcontainer.json.
 # Can also be run manually inside the container: check-exclusions
 #
-# Configuration: .devcontainer/excluded-files in the workspace root.
+# Configuration: excluded-files in the project layer (.devcontainer/project/).
 # Each line is a path relative to /workspace. Lines starting with # are ignored.
 #
 # A file is considered properly masked when it is one of:
 #   absent      — file does not exist in the workspace at all
 #   empty       — size 0 (result of bind-mounting /dev/null over it)
 #   char device — the bind-mount of /dev/null itself is visible as a device node
-#   dummy match — content is identical to the dummy template (see below)
+#   dummy match — content is identical to the dummy (see below)
 #
 # A directory is considered properly masked when it is one of:
 #   absent      — directory does not exist in the workspace at all
 #   empty       — no entries (result of tmpfs or empty bind-mount overlay)
-#   dummy match — contents identical to the dummy template (see below)
+#   dummy match — contents identical to the dummy (see below)
 #
-# Dummy templates are looked up in this order:
-#   .devcontainer/dummy-<top-dir>/dummy.<basename>   (e.g. dummy-ki-zfw-wm-code/dummy.configs)
-#   .devcontainer/dummy.<basename>
+# Dummies mirror the masked path inside the project layer:
+#   .devcontainer/project/dummies/<path>   (e.g. dummies/my-repo/configs)
 
 set -uo pipefail
 
 WORKSPACE="${WORKSPACE:-/workspace}"
-CONFIG="${WORKSPACE}/.devcontainer/excluded-files"
-DUMMY_DIR="${WORKSPACE}/.devcontainer"
+PROJECT_LAYER="${PROJECT_LAYER:-${WORKSPACE}/.devcontainer/project}"
+CONFIG="${PROJECT_LAYER}/excluded-files"
+DUMMY_DIR="${PROJECT_LAYER}/dummies"
 FAIL=0
+
+# No project layer at all — the setup is broken, don't pretend everything is fine
+if [ ! -d "$PROJECT_LAYER" ]; then
+  echo "[exclusions] ERROR: no project layer at ${PROJECT_LAYER}."
+  echo "             See README.md (\"Starting a new project\")."
+  exit 1
+fi
 
 # No config file — nothing to check
 if [ ! -f "$CONFIG" ]; then
-  echo "[exclusions] No .devcontainer/excluded-files found — skipping."
+  echo "[exclusions] No ${CONFIG} found — skipping."
   exit 0
 fi
 
@@ -42,10 +49,7 @@ while IFS= read -r relpath || [ -n "$relpath" ]; do
   [[ -z "$relpath" || "$relpath" == \#* ]] && continue
 
   target="${WORKSPACE}/${relpath}"
-  # Prefer a per-repo dummy (.devcontainer/dummy-<top-dir>/dummy.<basename>),
-  # fall back to the flat layout (.devcontainer/dummy.<basename>)
-  dummy="${DUMMY_DIR}/dummy-${relpath%%/*}/dummy.$(basename "$relpath")"
-  [ -e "$dummy" ] || dummy="${DUMMY_DIR}/dummy.$(basename "$relpath")"
+  dummy="${DUMMY_DIR}/${relpath}"
 
   # 1. Absent — nothing to leak
   if [ ! -e "$target" ]; then
@@ -70,7 +74,7 @@ while IFS= read -r relpath || [ -n "$relpath" ]; do
     # None of the above — directory has real content
     printf "  WARN         %s  <-- not masked!\n" "$relpath"
     if [ -d "$dummy" ]; then
-      echo "               expected: absent, empty, or matching $(basename "$dummy")/"
+      echo "               expected: absent, empty, or matching ${dummy}/"
     else
       echo "               expected: absent, or empty (tmpfs overlay)"
       echo "               to add a dummy template: create ${dummy}/"
@@ -101,7 +105,7 @@ while IFS= read -r relpath || [ -n "$relpath" ]; do
   # None of the above — file is present with real content
   printf "  WARN         %s  <-- not masked!\n" "$relpath"
   if [ -f "$dummy" ]; then
-    echo "               expected: absent, empty, /dev/null overlay, or matching $(basename "$dummy")"
+    echo "               expected: absent, empty, /dev/null overlay, or matching ${dummy}"
   else
     echo "               expected: absent, or empty (/dev/null overlay)"
     echo "               to add a dummy template: create ${dummy}"

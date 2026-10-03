@@ -1,0 +1,15 @@
+# Paths (relative to /workspace) that must be masked inside the container,
+# one per line. Lines starting with # are ignored.
+#
+# For each path, add a read-only mount in compose.yml:
+#   - /dev/null:/workspace/<path>:ro                          # blank a file
+#   - ./project/dummies/<path>:/workspace/<path>:ro           # replace with a dummy
+# A dummy mirrors the masked path under dummies/ and holds placeholder values only.
+#
+# check-exclusions verifies every path at container start, and 'claude'
+# refuses to start if one is not masked.
+#
+# Prefer masking whole directories over single files.
+#
+# my-repo/.env
+# my-repo/config

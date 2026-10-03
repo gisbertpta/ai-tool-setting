@@ -1,17 +1,22 @@
-# Claude Code sandbox: the devcontainer has no direct internet route.
-# All egress goes through the 'proxy' service, which only allows proxy/allowlist.txt.
-# Relative paths below resolve against this file's folder (.devcontainer/).
-
-name: claude-sandbox
+# Claude Code sandbox — generic part. The project layer (.devcontainer/project/compose.yml)
+# is merged on top of this file; see devcontainer.json and compose.sh.
+#
+# The devcontainer has no direct internet route. All egress goes through the
+# 'proxy' service, which only allows proxy/allowlist.txt + project/allowlist.txt.
+#
+# Relative paths resolve against this file's folder (.devcontainer/) — also the
+# ones written in project/compose.yml.
+# The compose project name ('name:') is set by the project layer.
 
 services:
   devcontainer:
     build:
+      # Context is the workspace root so the project Dockerfile can COPY files from
+      # working repos. What actually gets sent is limited by project/Dockerfile.dockerignore.
       context: ..
-      dockerfile: .devcontainer/Dockerfile
-      secrets:
-        - git-username
-        - git-password
+      dockerfile: .devcontainer/project/Dockerfile
+      args:
+        BASE_IMAGE: ai-envelope-base:latest   # built by initialize.sh
     command: sleep infinity
     cap_drop:
       - ALL
@@ -33,10 +38,7 @@ services:
       - ${HOME}/.claude:/home/claude/.claude:cached
       - ${HOME}/.claude.json:/home/claude/.claude.json:cached
       - ${HOME}/.gitconfig:/home/claude/.gitconfig:ro
-      # Masked secrets (keep in sync with excluded-files)
-      - ./dummy-ki-zfw-wm-code/dummy.configs:/workspace/ki-zfw-wm-code/configs:ro
-      - ./dummy.build-secret:/workspace/ki-zfw-wm-code/build-secret:ro
-      - /dev/null:/workspace/ki-zfw-wm-code/backend/scripts/.env:ro
+      # Project-specific masks are added in project/compose.yml
     networks:
       - sandbox
     depends_on:
@@ -45,6 +47,10 @@ services:
   proxy:
     build:
       context: ./proxy
+    volumes:
+      # Mounted, not baked in: after editing, 'compose.sh restart proxy' is enough
+      - ./proxy/allowlist.txt:/etc/squid/allowlist.txt:ro
+      - ./project/allowlist.txt:/etc/squid/allowlist-project.txt:ro
     networks:
       - sandbox
       - egress
@@ -55,9 +61,3 @@ networks:
   sandbox:
     internal: true
   egress: {}
-
-secrets:
-  git-username:
-    file: ${HOME}/.build-secrets/username
-  git-password:
-    file: ${HOME}/.build-secrets/password

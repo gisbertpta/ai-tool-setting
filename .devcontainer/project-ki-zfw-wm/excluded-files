@@ -1,0 +1,6 @@
+# Paths (relative to /workspace) that must be masked inside the container.
+# Each needs a matching read-only mount in compose.yml; dummies live under
+# dummies/<same path>. check-exclusions verifies this at start.
+ki-zfw-wm-code/configs
+ki-zfw-wm-code/build-secret
+ki-zfw-wm-code/backend/scripts/.env

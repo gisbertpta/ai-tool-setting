@@ -1,5 +1,6 @@
-# Domains the sandbox may reach (squid dstdomain syntax: leading dot = incl. subdomains).
-# Keep this short. Rebuild the proxy after changes (or restart the compose project).
+# Generic domains the sandbox may reach (squid dstdomain syntax: leading dot = incl. subdomains).
+# Project-specific domains go into the project layer's allowlist.txt.
+# Keep this short. After changes: .devcontainer/compose.sh restart proxy
 
 # Claude Code: API, login/token refresh
 .anthropic.com
@@ -14,7 +15,3 @@ update.code.visualstudio.com
 .vscode-cdn.net
 marketplace.visualstudio.com
 .gallerycdn.vsassets.io
-
-# Optional — uncomment only if needed from inside the container:
-# git.bitmarck.de                 # git fetch/push (container has no git credentials today)
-# artifactory.dakentw007200.de    # `uv add` / `uv sync` at runtime (build-time install is unaffected)

@@ -1,0 +1,38 @@
+# Project layer — compose part. Merged on top of .devcontainer/docker-compose.yml.
+#
+# PATHS: compose resolves every relative path against .devcontainer/ (the folder
+# of the first compose file), also the ones written here. Address files of this
+# layer via the slot path ./project/..., working repos via ../<repo>/...
+
+# Compose project name → container names <name>-devcontainer-1 / <name>-proxy-1.
+# Pick one per project so several projects can run side by side.
+name: ai-envelope-myproject
+
+services:
+  devcontainer:
+    # build:
+    #   # BuildKit secrets for private package indexes / git during the build
+    #   # (declare them under top-level 'secrets:' below)
+    #   secrets:
+    #     - git-username
+    #     - git-password
+
+    # Volumes are merged with the generic ones (docker-compose.yml).
+    # volumes:
+    #   # Mask secrets (keep in sync with excluded-files):
+    #   - /dev/null:/workspace/my-repo/.env:ro                                    # blank a file
+    #   - ./project/dummies/my-repo/config:/workspace/my-repo/config:ro          # replace with a dummy
+    #
+    #   # If this layer lives OUTSIDE .devcontainer/ (e.g. in a working repo),
+    #   # mount it read-only at its own workspace path, so the agent can't edit
+    #   # its sandbox config (masks, allowlist, Dockerfile) from inside:
+    #   - ../my-umbrella-repo/ai-envelope:/workspace/my-umbrella-repo/ai-envelope:ro
+
+    # environment:
+    #   MY_TOOL_SETTING: value
+
+# secrets:
+#   git-username:
+#     file: ${HOME}/.build-secrets/username
+#   git-password:
+#     file: ${HOME}/.build-secrets/password
