@@ -44,12 +44,22 @@ project's `modules` file. Copy an existing module as a starting point.
 
 Claude's sandbox settings are **managed settings** baked into the image
 (`claude/managed-settings.json` → `/etc/claude-code/managed-settings.json`):
-attribution off, Stop hook for ntfy. Managed settings have the highest
+attribution off, Stop hook for ntfy, SDD guard and secret read block (below).
+Managed settings have the highest
 precedence, apply in every directory (also when Claude starts in a nested
 repo, where `/workspace/.claude/settings.json` would not be loaded), and are
 root-owned, so the agent can't change them. Bypass-permissions mode comes from
 the `claude` wrapper (`--dangerously-skip-permissions`); auto-update is off
 (`DISABLE_AUTOUPDATER=1`), updates come with `NO_CACHE=1 initialize.sh`.
+
+**SDD guard.** A `PreToolUse` hook runs `scripts/agent/guards/check-command.sh`
+of a working repo before every `Bash`, `Monitor`, `Edit`, `Write` and `MultiEdit`
+call, if the repo has one (see the repo's `docs/sdd/onboarding.md`). It looks in
+the project dir and in every repo directly below it, so it also works when Claude
+starts in `/workspace`; each guard gets `CLAUDE_PROJECT_DIR` set to its own repo.
+Repos without a guard are not affected. `permissions.deny` blocks reading
+secret files (`.env`, `secrets.yml`, `build-secret/`, token files); deny rules
+and hooks also apply in bypass-permissions mode.
 
 ## ntfy notifications
 

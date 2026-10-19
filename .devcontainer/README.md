@@ -325,7 +325,7 @@ WARN   my-repo/config  <-- not masked!
   `echo '{}' > ~/.claude-devcontainer.json`, rebuild.
 - Login fails → check the proxy log. Login and token refresh need `.anthropic.com`
   and `.claude.ai`.
-- Settings: attribution and the Stop hook are managed settings in the image
+- Settings: attribution, the Stop hook and the SDD guard are managed settings in the image
   (`modules/claude/managed-settings.json` → `/etc/claude-code/managed-settings.json`).
   They apply in every directory, also in nested repos. Change them there and rebuild.
 

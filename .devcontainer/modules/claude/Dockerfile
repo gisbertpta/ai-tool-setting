@@ -19,5 +19,7 @@ RUN chmod 755 /usr/local/bin/claude /usr/local/libexec/ai-envelope/notify-ntfy.s
 
 # Updates come with an image rebuild (NO_CACHE=1 initialize.sh), not at runtime
 ENV DISABLE_AUTOUPDATER=1
-
+# Load CLAUDE.md (and its @AGENTS.md import) of the nested repos the wrapper
+# adds via --add-dir, so their rules apply when Claude starts in /workspace
+ENV CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1
 USER dev
