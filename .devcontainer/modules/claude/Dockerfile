@@ -17,6 +17,11 @@ COPY --chown=root:root notify-ntfy.sh /usr/local/libexec/ai-envelope/notify-ntfy
 RUN chmod 755 /usr/local/bin/claude /usr/local/libexec/ai-envelope/notify-ntfy.sh \
     && chmod 644 /etc/claude-code/managed-settings.json
 
+# Claude Code starts its shells with NO_PROXY=localhost while no_proxy keeps the
+# full list; Go tools (glab) read NO_PROXY first and would send hosts that bypass                              
+# the proxy (e.g. via a credential gateway) to the proxy instead
+RUN printf '%s\n' '[ -n "${no_proxy:-}" ] && export NO_PROXY="$no_proxy"' >> /etc/zsh/zshenv
+
 # Updates come with an image rebuild (NO_CACHE=1 initialize.sh), not at runtime
 ENV DISABLE_AUTOUPDATER=1
 # Load CLAUDE.md (and its @AGENTS.md import) of the nested repos the wrapper
