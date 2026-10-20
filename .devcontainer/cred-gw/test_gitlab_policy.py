@@ -89,6 +89,25 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(needs('GET', f'{API}/projects/42'), (('42', 'read'),))
         self.assertEqual(needs('GET', f'{API}/user'), ())
 
+    def test_user_lookup_by_exact_username(self) -> None:
+        for query in ('username=dak.annika.boer', 'username=u033037&per_page=100&page=1'):
+            with self.subTest(query=query):
+                self.assertEqual(plan_request(POLICY, 'GET', f'{API}/users', query, '', None).query, query)
+        for method, path, query in (
+            ('GET', f'{API}/users', ''),
+            ('GET', f'{API}/users', 'search=a'),
+            ('GET', f'{API}/users', 'username=a&search=b'),
+            ('GET', f'{API}/users', 'username=a&username=b'),
+            ('GET', f'{API}/users', 'username='),
+            ('GET', f'{API}/users', 'username=a%20b'),
+            ('GET', f'{API}/users', 'username=a&active=true'),
+            ('POST', f'{API}/users', 'username=a'),
+            ('GET', f'{API}/users/1', ''),
+            ('GET', f'{API}/users/1/projects', ''),
+        ):
+            with self.subTest(method=method, path=path, query=query), self.assertRaises(Denied):
+                needs(method, path, query)
+
     def test_secret_settings_and_other_endpoints_are_refused(self) -> None:
         for method, path in (
             ('GET', f'{API}/projects/42/variables'),

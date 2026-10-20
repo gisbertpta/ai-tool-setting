@@ -7,10 +7,11 @@ Git (smart HTTP):
 
 REST API (/api/v4):
 - GET user, version, metadata
+- GET users?username=<name>: one exact name (page, per_page optional); glab resolves MR reviewers this way
 - GET projects/<project>[/...]: project in the read or write list; settings with secrets are refused
 - POST projects/<project>/merge_requests: project (and target_project_id) in the write list
 - PUT projects/<project>/merge_requests/<iid>, POST .../merge_requests/<iid>/notes|discussions: write list
-- never: merge, approve, delete, other projects, groups, users, search, GraphQL
+- never: merge, approve, delete, other projects, groups, user lists or searches, search, GraphQL
 
 Force pushes to an allowed branch cannot be told apart from normal pushes here; protect develop/main in GitLab.
 """
@@ -39,6 +40,8 @@ MR_WRITES = (
 )
 SECRET_SETTINGS = re.compile(r'^/(variables|access_tokens|deploy_tokens|deploy_keys|hooks|integrations|services)(/|$)')
 ZERO_OID = re.compile(r'^0+$')
+USERNAME = re.compile(r'^[A-Za-z0-9_][A-Za-z0-9_.\-]*$')
+USER_LOOKUP_PAGING = frozenset({'page', 'per_page'})
 MAX_JSON_BYTES = 1_000_000
 
 
@@ -80,6 +83,8 @@ def plan_request(policy: GitLabPolicy, method: str, path: str, query: str, conte
         return plan_git(policy, method, git['project'].removesuffix('.git'), git['op'], query, body)
     if method == 'GET' and path in (f'{API}/user', f'{API}/version', f'{API}/metadata'):
         return Plan((), query)
+    if method == 'GET' and path == f'{API}/users':
+        return Plan((), user_lookup_query(query))
     project = PROJECT_PATH.match(path)
     if project:
         ref = urllib.parse.unquote(project['ref'])
@@ -88,6 +93,19 @@ def plan_request(policy: GitLabPolicy, method: str, path: str, query: str, conte
             raise Denied(400, 'encoded characters after the project are not allowed')
         return plan_api(method, ref, rest, query, content_type, body)
     raise Denied(403, f'{method} {path} is not allowed by cred-gw')
+
+
+def user_lookup_query(query: str) -> str:
+    """Allow the lookup of one user by exact username, as glab does for `--reviewer`; no list, no search.
+
+    Raises:
+        Denied: without exactly one valid `username`, or with any parameter besides page and per_page.
+    """
+    params = urllib.parse.parse_qs(query, keep_blank_values=True)
+    names = params.get('username', [])
+    if len(names) != 1 or not USERNAME.match(names[0]) or set(params) - {'username'} - USER_LOOKUP_PAGING:
+        raise Denied(403, 'only GET users?username=<name> is allowed by cred-gw')
+    return query
 
 
 def plan_git(policy: GitLabPolicy, method: str, project: str, op: str, query: str, body: bytes | None) -> Plan:
