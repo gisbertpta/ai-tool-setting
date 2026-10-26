@@ -8,6 +8,7 @@ never bodies.
 Environment (a service is on when its UPSTREAM is set):
     JIRA_GW_UPSTREAM        https://jira.example.com
     JIRA_GW_LABEL           label that marks the project's issues
+    JIRA_GW_PROJECTS        comma-separated project keys whose metadata (components, versions, boards) may be read
     JIRA_GW_ALLOW_WRITES    '1' enables edit, comment, transition and create (default: read-only)
     JIRA_GW_TOKEN_FILE      default /run/secrets/jira-token
     GITLAB_GW_UPSTREAM      https://gitlab.example.com
@@ -81,6 +82,7 @@ def make_handler(routes: dict[str, tuple[Service, Upstream]]) -> type[BaseHTTPRe
                 forward_query = service.authorize(self.command, path, query, self.headers, body, upstream)
                 headers = {name: self.headers[name] for name in FORWARD_REQUEST_HEADERS if self.headers.get(name)}
                 response = upstream.open(self.command, path + (f'?{forward_query}' if forward_query else ''), body, headers)
+                observer = service.response_observer(self.command, path)
             except Denied as denied:
                 logger.info('deny %s %s %s: %s', host, self.command, path, denied.reason)
                 # 'message' is read by glab, 'errorMessages' by the Jira scripts; git gets its own report format
@@ -98,7 +100,7 @@ def make_handler(routes: dict[str, tuple[Service, Upstream]]) -> type[BaseHTTPRe
                 return
             with response:
                 logger.info('pass %s %s %s -> %d', host, self.command, path, response.status)
-                self.stream(response)
+                self.stream(response, observer if response.status == 200 else None)
 
         def read_body(self) -> bytes | None:
             """Read the request body (Content-Length or chunked).
@@ -131,8 +133,11 @@ def make_handler(routes: dict[str, tuple[Service, Upstream]]) -> type[BaseHTTPRe
                 parts.append(self.rfile.read(size))
                 self.rfile.readline(1024)
 
-        def stream(self, response: Any) -> None:
-            """Copy status, selected headers and the body; the connection closes afterwards (HTTP/1.0)."""
+        def stream(self, response: Any, observer: Callable[[bytes], None] | None) -> None:
+            """Copy status, selected headers and the body; the connection closes afterwards (HTTP/1.0).
+
+            An observer gets the whole body before it is sent, so that body is buffered instead of streamed.
+            """
             self.send_response(response.status)
             for name in FORWARD_RESPONSE_HEADERS:
                 if response.headers.get(name):
@@ -141,6 +146,11 @@ def make_handler(routes: dict[str, tuple[Service, Upstream]]) -> type[BaseHTTPRe
                 self.send_header('Content-Length', response.headers['Content-Length'])
             self.end_headers()
             if self.command == 'HEAD':
+                return
+            if observer:
+                content = response.read()
+                observer(content)
+                self.wfile.write(content)
                 return
             while chunk := response.read(CHUNK):
                 self.wfile.write(chunk)
@@ -192,10 +202,16 @@ def build_routes(context: ssl.SSLContext) -> dict[str, tuple[Service, Upstream]]
         if not label or '"' in label or '\\' in label:
             raise SystemExit('JIRA_GW_LABEL must be set and free of quotes and backslashes')
         token = read_secret('JIRA_GW_TOKEN_FILE', '/run/secrets/jira-token')
-        policy = Policy(label=label, allow_writes=os.environ.get('JIRA_GW_ALLOW_WRITES') == '1')
+        projects = frozenset(item.strip().upper() for item in os.environ.get('JIRA_GW_PROJECTS', '').split(',') if item.strip())
+        if not all(re.fullmatch(r'[A-Z][A-Z0-9_]+', project) for project in projects):
+            raise SystemExit('JIRA_GW_PROJECTS must be comma-separated Jira project keys')
+        policy = Policy(label=label, projects=projects, allow_writes=os.environ.get('JIRA_GW_ALLOW_WRITES') == '1')
         auth: Callable[[str], dict[str, str]] = lambda _path, token=token: bearer(token)
         routes[host] = (JiraService(host, policy), Upstream(os.environ['JIRA_GW_UPSTREAM'], context, auth))
-        logger.info('jira %s: label %r, writes %s', host, label, 'on' if policy.allow_writes else 'off')
+        logger.info(
+            'jira %s: label %r, projects %s, writes %s',
+            host, label, ','.join(sorted(projects)) or '-', 'on' if policy.allow_writes else 'off',
+        )
     if os.environ.get('GITLAB_GW_UPSTREAM'):
         host = https_host('GITLAB_GW_UPSTREAM')
         write = project_list('GITLAB_GW_WRITE')

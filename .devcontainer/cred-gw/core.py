@@ -78,3 +78,7 @@ class Service(Protocol):
             Denied: when the rules refuse the request.
         """
         ...
+
+    def response_observer(self, method: str, path: str) -> Callable[[bytes], None] | None:
+        """Return a callback that wants the body of a successful response to this request, or None."""
+        ...

@@ -6,11 +6,12 @@ import unittest
 import urllib.parse
 
 from core import Denied
-from jira_policy import API, JiraService, Plan, Policy, parse_body, plan_request, split_order_by
+from jira_policy import AGILE, API, JiraService, Plan, Policy, attachment_ids, parse_body, plan_request, split_order_by
 
 LABEL = 'Widerspruchsmanager'
-READ_ONLY = Policy(label=LABEL, allow_writes=False)
-WRITES = Policy(label=LABEL, allow_writes=True)
+PROJECTS = frozenset({'PILOT'})
+READ_ONLY = Policy(label=LABEL, projects=PROJECTS, allow_writes=False)
+WRITES = Policy(label=LABEL, projects=PROJECTS, allow_writes=True)
 
 
 def jql_of(plan: Plan) -> str:
@@ -20,17 +21,59 @@ def jql_of(plan: Plan) -> str:
 
 class ReadRulesTest(unittest.TestCase):
     def test_issue_reads_need_label_check(self) -> None:
-        for path in (f'{API}/issue/PILOT-1', f'{API}/issue/PILOT-1/comment', f'{API}/issue/12345/transitions'):
+        for path in (
+            f'{API}/issue/PILOT-1',
+            f'{API}/issue/PILOT-1/comment',
+            f'{API}/issue/12345/transitions',
+            f'{API}/issue/PILOT-1/remotelink',
+            f'{API}/issue/PILOT-1/worklog',
+        ):
             plan = plan_request(READ_ONLY, 'GET', path, 'startAt=0', None)
             self.assertEqual(plan.check_keys, (path.split('/')[5],))
             self.assertEqual(plan.query, 'startAt=0')
 
+    def test_metadata_passes_without_checks(self) -> None:
+        for path in (
+            f'{API}/myself',
+            f'{API}/field',
+            f'{API}/status/3',
+            f'{API}/issuetype',
+            f'{API}/user',
+            f'{AGILE}/board/12/configuration',
+            f'{AGILE}/sprint/5',
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(plan_request(READ_ONLY, 'GET', path, 'username=x', None), Plan((), 'username=x'))
+
+    def test_project_endpoints_only_for_own_projects(self) -> None:
+        for path, query in (
+            (f'{API}/project/PILOT', ''),
+            (f'{API}/project/pilot/components', ''),
+            (f'{API}/issue/createmeta/PILOT/issuetypes/10006', ''),
+            (f'{AGILE}/board', 'projectKeyOrId=PILOT'),
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(plan_request(READ_ONLY, 'GET', path, query, None).check_keys, ())
+        for path, query in (
+            (f'{API}/project/OTHER/versions', ''),
+            (f'{API}/issue/createmeta/OTHER/issuetypes', ''),
+            (f'{AGILE}/board', ''),
+            (f'{AGILE}/board', 'projectKeyOrId=OTHER'),
+        ):
+            with self.subTest(path=path, query=query), self.assertRaises(Denied):
+                plan_request(READ_ONLY, 'GET', path, query, None)
+
     def test_other_endpoints_are_denied(self) -> None:
         for method, path in (
             ('GET', f'{API}/project'),
-            ('GET', f'{API}/user'),
-            ('GET', f'{API}/issue/PILOT-1/remotelink'),
-            ('GET', '/rest/agile/1.0/board/1/issue'),
+            ('GET', f'{API}/user/search'),
+            ('GET', f'{API}/filter/1'),
+            ('GET', f'{API}/dashboard'),
+            ('GET', f'{API}/issue/picker'),
+            ('GET', f'{API}/jql/autocompletedata'),
+            ('GET', f'{API}/issue/PILOT-1/comment/123'),
+            ('GET', f'{AGILE}/board/1/epic'),
+            ('GET', '/secure/attachment/1/..'),
             ('POST', f'{API}/search'),
             ('DELETE', f'{API}/issue/PILOT-1'),
             ('POST', f'{API}/issueLink'),
@@ -73,6 +116,22 @@ class SearchRulesTest(unittest.TestCase):
         with self.assertRaises(Denied):
             plan_request(READ_ONLY, 'GET', f'{API}/search', 'jql=a%3D1&jql=b%3D2', None)
 
+    def test_agile_issue_lists_are_wrapped(self) -> None:
+        for path in (
+            f'{AGILE}/board/1/issue',
+            f'{AGILE}/board/1/backlog',
+            f'{AGILE}/board/1/sprint/7/issue',
+            f'{AGILE}/board/1/epic/none/issue',
+            f'{AGILE}/sprint/7/issue',
+            f'{AGILE}/epic/PILOT-3/issue',
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(jql_of(plan_request(READ_ONLY, 'GET', path, '', None)), f'labels = "{LABEL}"')
+        plan = plan_request(READ_ONLY, 'GET', f'{AGILE}/board/1/issue', 'jql=status%3DOpen', None)
+        self.assertEqual(jql_of(plan), f'(status=Open) AND labels = "{LABEL}"')
+        with self.assertRaises(Denied):
+            plan_request(READ_ONLY, 'GET', f'{AGILE}/board/1/issue', 'jql=x%3D1%29+OR+%28y%3D2', None)
+
 
 class WriteRulesTest(unittest.TestCase):
     def test_edit_keeping_label_passes(self) -> None:
@@ -101,6 +160,19 @@ class WriteRulesTest(unittest.TestCase):
             plan_request(WRITES, 'POST', f'{API}/issue', '', {'fields': {'labels': [LABEL], 'parent': {}}})
 
 
+class AttachmentTest(unittest.TestCase):
+    def test_attachment_paths_name_the_id(self) -> None:
+        for path in ('/secure/attachment/42/scan.pdf', '/secure/thumbnail/42/_thumb_42.png', f'{API}/attachment/42'):
+            with self.subTest(path=path):
+                self.assertEqual(plan_request(READ_ONLY, 'GET', path, '', None).attachment, '42')
+
+    def test_ids_are_collected_from_issue_and_search(self) -> None:
+        issue = {'fields': {'attachment': [{'id': '1'}, {'id': 2}, {'id': 'x'}]}}
+        self.assertEqual(attachment_ids(issue), {'1', '2'})
+        self.assertEqual(attachment_ids({'issues': [issue, {'fields': {}}]}), {'1', '2'})
+        self.assertEqual(attachment_ids([]), set())
+
+
 class FakeJira:
     """Answers label lookups; issues in `labelled` carry the label."""
 
@@ -123,6 +195,25 @@ class ServiceTest(unittest.TestCase):
         with self.assertRaises(Denied) as caught:
             service.authorize('POST', f'{API}/issue/OTHER-9/comment', '', {}, b'{"body": "x"}', FakeJira(set()))  # type: ignore[arg-type]
         self.assertEqual(caught.exception.status, 403)
+
+    def test_attachment_needs_a_labelled_read_first(self) -> None:
+        service = JiraService('jira.test', READ_ONLY)
+        fake = FakeJira({'PILOT-1'})
+        with self.assertRaises(Denied):
+            service.authorize('GET', '/secure/attachment/42/scan.pdf', '', {}, None, fake)  # type: ignore[arg-type]
+        observer = service.response_observer('GET', f'{API}/issue/PILOT-1')
+        assert observer is not None
+        observer(b'{"fields": {"attachment": [{"id": "42"}]}}')
+        self.assertEqual(service.authorize('GET', '/secure/attachment/42/scan.pdf', '', {}, None, fake), '')  # type: ignore[arg-type]
+
+    def test_only_issue_reads_and_searches_are_observed(self) -> None:
+        service = JiraService('jira.test', READ_ONLY)
+        for method, path in (('GET', f'{API}/search'), ('GET', f'{AGILE}/sprint/7/issue')):
+            self.assertIsNotNone(service.response_observer(method, path))
+        for method, path in (('GET', f'{API}/issue/PILOT-1/comment'), ('PUT', f'{API}/issue/PILOT-1'), ('GET', f'{API}/field')):
+            self.assertIsNone(service.response_observer(method, path))
+        service.remember_attachments(b'\x1f\x8b not json')
+        self.assertEqual(service.attachments, set())
 
     def test_invalid_json_is_refused(self) -> None:
         with self.assertRaises(Denied):

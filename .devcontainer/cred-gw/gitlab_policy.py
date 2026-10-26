@@ -254,6 +254,10 @@ class GitLabService:
             self.project_paths[project_id] = found
         return self.project_paths[project_id]
 
+    def response_observer(self, method: str, path: str) -> None:
+        """GitLab responses are not inspected."""
+        return None
+
 
 def gitlab_auth(token: str, git_user: str = 'oauth2') -> Any:
     """Return the credential function: Basic auth for git smart HTTP, PRIVATE-TOKEN for the API."""
